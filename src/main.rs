@@ -64,24 +64,116 @@ fn app() -> Element {
             return;
         }
 
+        // spawn(async move {
+        //     submission_status.set("Beküldés folyamatban...".to_string());
+            
+        //     // A Horizon API URL-je (Testnet)
+        //     let url = "https://horizon-testnet.stellar.org";
+            
+        //     // A paraméter formátuma: tx=BASE64_XDR
+        //     let params = [("tx", xdr_to_submit)];
+        //     let client = reqwest::Client::new();
+
+        //     // match client.post(url).form(&params).send().await {
+        //     //     Ok(response) => {
+        //     //         if response.status().is_success() {
+        //     //             submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
+        //     //         } else {
+        //     //             let error_text = response.text().await.unwrap_or_default();
+        //     //             println!("Horizon hiba: {}", error_text);
+        //     //             submission_status.set("❌ Hiba: A hálózat elutasította.".to_string());
+        //     //         }
+        //     //     }
+        //     //     Err(e) => {
+        //     //         submission_status.set(format!("❌ Hálózati hiba: {}", e));
+        //     //     }
+        //     // }
+
+        //     match client.post(url).form(&params).send().await {
+        //         Ok(response) => {
+        //             let status = response.status();
+        //             // Kiolvassuk a teljes választ, hogy lássuk a JSON részleteket (pl. tx_bad_seq)
+        //             let body = response.text().await.unwrap_or_default();
+                    
+        //             if status.is_success() {
+        //                 submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
+        //             } else {
+        //                 println!("Horizon hiba ({}): {}", status, body); // Ez már kiírja a tx_bad_seq-et is!
+                        
+        //                 if body.contains("tx_bad_seq") {
+        //                     submission_status.set("❌ Hiba: Rossz szekvenciaszám. Generálj újat!".to_string());
+        //                 } else if body.contains("tx_insufficient_fee") {
+        //                     submission_status.set("❌ Hiba: Kevés a fee.".to_string());
+        //                 } else {
+        //                     submission_status.set(format!("❌ Hiba: {}", status));
+        //                 }
+        //             }
+        //         }
+        //         Err(e) => {
+        //             submission_status.set(format!("❌ Hálózati hiba: {}", e));
+        //         }
+        //     }
+        // });
+
+        // spawn(async move {
+        //     submission_status.set("Beküldés folyamatban...".to_string());
+            
+        //     let url = "https://horizon-testnet.stellar.org";
+            
+        //     // A Horizon JSON-t vár, amiben van egy "tx" mező
+        //     let payload = serde_json::json!({
+        //         "tx": xdr_to_submit
+        //     });
+
+        //     let client = reqwest::Client::new();
+
+        //     // .form() HELYETT .json() használata!
+        //     match client.post(url).json(&payload).send().await {
+        //         Ok(response) => {
+        //             let status = response.status();
+        //             let body = response.text().await.unwrap_or_default();
+                    
+        //             if status.is_success() {
+        //                 submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
+        //             } else {
+        //                 println!("Horizon hiba ({}): {}", status, body);
+        //                 submission_status.set(format!("❌ Hiba: {}", status));
+        //             }
+        //         }
+        //         Err(e) => {
+        //             submission_status.set(format!("❌ Hálózati hiba: {}", e));
+        //         }
+        //     }
+        // });
+
         spawn(async move {
             submission_status.set("Beküldés folyamatban...".to_string());
             
-            // A Horizon API URL-je (Testnet)
-            let url = "https://horizon-testnet.stellar.org";
+            // FIGYELJ: Az URL-nek pontosan így kell kinéznie, per jel nélkül a végén!
+            let url = "https://horizon-testnet.stellar.org/transactions";
             
-            // A paraméter formátuma: tx=BASE64_XDR
-            let params = [("tx", xdr_to_submit)];
             let client = reqwest::Client::new();
 
-            match client.post(url).form(&params).send().await {
+            // A Stellar Horizon számára a legbiztosabb a form-encoded POST
+            // A kulcs "tx", az érték a Base64 XDR
+            let params = [("tx", xdr_to_submit)];
+
+            match client.post(url)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .form(&params)
+                .send()
+                .await 
+            {
                 Ok(response) => {
-                    if response.status().is_success() {
+                    let status = response.status();
+                    let body = response.text().await.unwrap_or_default();
+                    
+                    if status.is_success() {
                         submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
                     } else {
-                        let error_text = response.text().await.unwrap_or_default();
-                        println!("Horizon hiba: {}", error_text);
-                        submission_status.set("❌ Hiba: A hálózat elutasította.".to_string());
+                        // Itt kiírjuk a hiba részleteit is a terminálba
+                        println!("Horizon hiba ({}): {}", status, body);
+                        submission_status.set(format!("❌ Hiba: {}", status));
                     }
                 }
                 Err(e) => {
@@ -89,7 +181,7 @@ fn app() -> Element {
                 }
             }
         });
-    };
+   };
 
     let copy_xdr_to_clipboard = move |_| {
         let xdr_text = generated_xdr.read().clone();
@@ -101,221 +193,222 @@ fn app() -> Element {
                 // Visszaállítás 5 másodperc után
                 spawn(async move {
                     tokio::time::sleep(Duration::from_secs(5)).await;
+
+                    let _ = clipboard;
+
                     xdr_copy_status.set("XDR Másolása".to_string());
                 });
             }
         }
     };
 
-    // // --- Biztonságos Másolás ---
-    // let copy_to_clipboard = move |_| {
-    //     if let Some(secret) = secret_key_hidden.read().as_ref() {
-    //         let secret_to_copy = secret.to_string();
-    //         if let Ok(mut clipboard) = Clipboard::new() {
-    //             let _ = clipboard.set_text(secret_to_copy);
-    //             clipboard_status.set("MÁSOLVA (30mp)".to_string());
-
-    //             spawn(async move {
-    //                 tokio::time::sleep(Duration::from_secs(30)).await;
-    //                 if let Ok(mut cb) = Clipboard::new() {
-    //                     if let Ok(content) = cb.get_text() {
-    //                         if content.starts_with('S') && content.len() == 56 {
-    //                             let _ = cb.set_text("".to_string());
-    //                         }
-    //                     }
-    //                 }
-    //                 clipboard_status.set("Másolás".to_string());
-    //             });
-    //         }
-    //     }
-    // };
-
-    // let fetch_sequence_and_create_xdr = move |_| {
-    //     let pubkey_str = public_key.read().clone();
-    //     let secret_str_opt = secret_key_hidden.read().clone();
-
-    //     if pubkey_str == "Nincs kulcs betöltve" { return; }
-
-    //     spawn(async move {
-    //         submission_status.set("Szekvenciaszám lekérése...".to_string());
+    let copy_to_clipboard = move |_| {
+        if let Some(secret) = secret_key_hidden.read().as_ref() {
+            let secret_to_copy = secret.to_string();
             
-    //         let url = format!("https://horizon-testnet.stellar.org{}", pubkey_str);
-    //         let client = reqwest::Client::new();
+            // Létrehozzuk a vágólapot
+            if let Ok(mut clipboard) = Clipboard::new() {
+                // Beállítjuk a szöveget
+                let _ = clipboard.set_text(secret_to_copy);
+                clipboard_status.set("MÁSOLVA (30mp)".to_string());
 
-    //         match client.get(url).send().await {
-    //             Ok(resp) if resp.status().is_success() => {
-    //                 if let Ok(account_data) = resp.json::<HorizonAccount>().await {
-    //                     let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
-    //                     let next_seq = current_seq + 1;
-                        
-    //                     // Most már generálhatjuk az XDR-t a friss szekvenciával
-    //                     if let Some(secret_str) = secret_str_opt.as_ref() {
-    //                         create_signed_transaction(secret_str, next_seq);
-    //                     }
-    //                 }
-    //             },
-    //             _ => submission_status.set("❌ Hiba: Nem található a fiók (nincs aktiválva?)".to_string()),
-    //         }
-    //     });
-    // };
+                // Átadjuk a clipboard-ot a spawn-nak, így nem dobódik el azonnal!
+                spawn(async move {
+                    // Itt a 'clipboard' objektum életben marad a tokio szálon
+                    tokio::time::sleep(Duration::from_secs(30)).await;
+                    
+                    // 30 mp után töröljük, mielőtt a szál véget érne és a clipboard drop-olódna
+                    let _ = clipboard.set_text("".to_string());
+                    
+                    clipboard_status.set("Másolás".to_string());
+                });
+            }
+        }
+    };
 
-    // // Ez a függvény a szekvencia birtokában állítja össze a végleges XDR-t
-    // fn create_signed_transaction(secret_str: &str, next_seq: i64) {
-    //     // ... Itt jön az előzőleg megírt Transaction envelope-os kód ...
-    //     if let Ok(Strkey::PrivateKeyEd25519(priv_key)) = Strkey::from_string(secret_str.as_str()) {
-            
-    //         let signing_key = ed25519_dalek::SigningKey::from_bytes(&priv_key.0);
-    //         let pub_bytes = signing_key.verifying_key().to_bytes();
-    //         let source_pubkey = Uint256(pub_bytes);
-
-    //         let tx = Transaction {
-    //             source_account: MuxedAccount::Ed25519(source_pubkey),
-    //             fee: 100,
-    //             seq_num: SequenceNumber(next_seq),
-    //             cond: Preconditions::None,
-    //             memo: Memo::None,
-    //             operations: VecM::try_from(vec![
-    //                 Operation {
-    //                     source_account: None,
-    //                     body: OperationBody::Payment(PaymentOp {
-    //                         destination: MuxedAccount::Ed25519(Uint256(pub_bytes)),
-    //                         asset: Asset::Native,
-    //                         amount: 100_000_000, 
-    //                     }),
-    //                 }
-    //             ]).unwrap(),
-    //             ext: TransactionExt::V0,
-    //         };
-
-    //         // --- ALÁÍRÁS JAVÍTVA ---
-            
-    //         // 1. Network ID kiszámítása (SHA256 a passphrase-re)
-    //         let network_passphrase = "Test SDF Network ; September 2015";
-    //         let network_id = Sha256::digest(network_passphrase.as_bytes());
-
-    //         // 2. Aláírandó payload összeállítása: NetworkID + EnvelopeType + TransactionXDR
-    //         let mut sig_payload = Vec::new();
-    //         sig_payload.extend_from_slice(&network_id);
-    //         sig_payload.extend_from_slice(&(EnvelopeType::Tx as i32).to_be_bytes()); // 4 bájtos BigEndian típus
-    //         sig_payload.extend_from_slice(&tx.to_xdr(Limits::none()).unwrap());
-            
-    //         // 3. Aláírás és típuskonverzió (BytesM<64>)
-    //         let signature_bytes = signing_key.sign(&sig_payload).to_bytes();
-    //         let signature = Signature(BytesM::try_from(signature_bytes).unwrap());
-
-    //         // 4. Hint (Pubkey utolsó 4 bájtja)
-    //         let mut hint_bytes = [0u8; 4];
-    //         hint_bytes.copy_from_slice(&pub_bytes[28..]);
-
-    //         let decorated_signature = DecoratedSignature {
-    //             hint: SignatureHint(hint_bytes),
-    //             signature,
-    //         };
-
-    //         // 5. Boríték és Base64
-    //         let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
-    //             tx,
-    //             signatures: VecM::try_from(vec![decorated_signature]).unwrap(),
-    //         });
-
-    //         if let Ok(xdr_string) = envelope.to_xdr_base64(Limits::none()) {
-    //             generated_xdr.set(xdr_string);
-    //             submission_status.set(format!("XDR kész (Seq: {})", next_seq));
-    //         }
-    //     }
-    // }
-
+    // --- AKTIVÁLÓ (Friendbot) ---
     let activate_account = move |_| {
         let pubkey = public_key.read().clone();
+        if pubkey == "Nincs kulcs betöltve" { return; }
+
         spawn(async move {
-            submission_status.set("Friendbot hívása...".to_string());
-            let url = format!("https://friendbot.stellar.org{}", pubkey);
-            if let Ok(_) = reqwest::get(url).await {
-                submission_status.set("✅ Fiók aktiválva! (10,000 XLM)".to_string());
+            submission_status.set("🚀 Friendbot hívása...".to_string());
+            let url = format!("https://friendbot.stellar.org/?addr={}", pubkey);
+            
+            match reqwest::get(url).await {
+                Ok(resp) if resp.status().is_success() => {
+                    submission_status.set("✅ Fiók aktiválva! (10,000 XLM)".to_string());
+                },
+                Ok(resp) => {
+                    submission_status.set(format!("❌ Friendbot hiba: {}", resp.status()));
+                },
+                Err(e) => {
+                    submission_status.set(format!("❌ Hálózati hiba: {}", e));
+                }
             }
         });
     };
 
-    // A szekvencia lekérő és generáló gomb logic az app() { ... } -en belül
+    // --- XDR GENERÁLÓ (Lekéréssel együtt) ---
     let fetch_and_generate = move |_| {
         let pubkey_str = public_key.read().clone();
         let secret_str_opt = secret_key_hidden.read().clone();
 
-        if pubkey_str == "Nincs kulcs betöltve" { return; }
+        if pubkey_str == "Nincs kulcs betöltve" { 
+            submission_status.set("⚠️ Nincs betöltött kulcs!".to_string());
+            return; 
+        }
 
         spawn(async move {
-            submission_status.set("Szekvenciaszám lekérése...".to_string());
+            submission_status.set("🔍 Szekvenciaszám lekérése...".to_string());
             
-            let url = format!("https://horizon-testnet.stellar.org{}", pubkey_str);
+            let url = format!("https://horizon-testnet.stellar.org/accounts/{}", pubkey_str);
             let client = reqwest::Client::new();
 
-            if let Ok(resp) = client.get(url).send().await {
-                if resp.status().is_success() {
-                    if let Ok(account_data) = resp.json::<HorizonAccount>().await {
-                        let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
-                        let next_seq = current_seq + 1;
-                        
-                        if let Some(secret_str) = secret_str_opt.as_ref() {
-                            // Itt hívjuk meg a generáló logikát
-                            // A secret_str-t String-ként adjuk át
-                            let secret_val = secret_str.to_string();
-                            
-                            // Kriptográfiai rész
-                            if let Ok(Strkey::PrivateKeyEd25519(priv_key)) = Strkey::from_string(&secret_val) {
-                                let signing_key = ed25519_dalek::SigningKey::from_bytes(&priv_key.0);
-                                let pub_bytes = signing_key.verifying_key().to_bytes();
-                                
-                                // Tranzakció összeállítása a kapott next_seq-vel
-                                let tx = Transaction {
-                                    source_account: MuxedAccount::Ed25519(Uint256(pub_bytes)),
-                                    fee: 100,
-                                    seq_num: SequenceNumber(next_seq),
-                                    cond: Preconditions::None,
-                                    memo: Memo::None,
-                                    operations: VecM::try_from(vec![
-                                        Operation {
-                                            source_account: None,
-                                            body: OperationBody::Payment(PaymentOp {
-                                                destination: MuxedAccount::Ed25519(Uint256(pub_bytes)),
-                                                asset: Asset::Native,
-                                                amount: 100_000_000, 
-                                            }),
-                                        }
-                                    ]).unwrap(),
-                                    ext: TransactionExt::V0,
-                                };
+            let response = match client.get(url).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    submission_status.set(format!("❌ Horizon nem elérhető: {}", e));
+                    return;
+                }
+            };
 
-                                // Aláírás (Network ID, Hash, Envelope...)
-                                let network_passphrase = "Test SDF Network ; September 2015";
-                                let network_id = Sha256::digest(network_passphrase.as_bytes());
-                                let mut sig_payload = Vec::new();
-                                sig_payload.extend_from_slice(&network_id);
-                                sig_payload.extend_from_slice(&(EnvelopeType::Tx as i32).to_be_bytes());
-                                sig_payload.extend_from_slice(&tx.to_xdr(Limits::none()).unwrap());
-                                
-                                let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
-                                let mut hint = [0u8; 4];
-                                hint.copy_from_slice(&pub_bytes[28..]);
+            if !response.status().is_success() {
+                submission_status.set("❌ Fiók nem található! Előbb aktiváld!".to_string());
+                return;
+            }
 
-                                let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
-                                    tx,
-                                    signatures: VecM::try_from(vec![
-                                        DecoratedSignature {
-                                            hint: SignatureHint(hint),
-                                            signature: Signature(BytesM::try_from(sig_bytes).unwrap()),
-                                        }
-                                    ]).unwrap(),
-                                });
+            let account_data = match response.json::<HorizonAccount>().await {
+                Ok(data) => data,
+                Err(e) => {
+                    submission_status.set(format!("❌ JSON hiba: {}", e));
+                    return;
+                }
+            };
 
-                                if let Ok(xdr) = envelope.to_xdr_base64(Limits::none()) {
-                                    generated_xdr.set(xdr);
-                                    submission_status.set(format!("XDR Kész! (Seq: {})", next_seq));
-                                }
+            let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
+            let next_seq = current_seq + 1;
+            
+            if let Some(secret_str) = secret_str_opt.as_ref() {
+                let secret_val = secret_str.to_string();
+                
+               // --- Aláírási Logika ---
+                if let Ok(Strkey::PrivateKeyEd25519(priv_key)) = Strkey::from_string(&secret_val) {
+                    let signing_key = ed25519_dalek::SigningKey::from_bytes(&priv_key.0);
+                    let pub_bytes = signing_key.verifying_key().to_bytes();
+                    
+                    let tx = Transaction {
+                        source_account: MuxedAccount::Ed25519(Uint256(pub_bytes)),
+                        fee: 100,
+                        seq_num: SequenceNumber(next_seq),
+                        cond: Preconditions::None,
+                        memo: Memo::None,
+                        operations: VecM::try_from(vec![
+                            Operation {
+                                source_account: None,
+                                body: OperationBody::Payment(PaymentOp {
+                                    destination: MuxedAccount::Ed25519(Uint256(pub_bytes)), // Önmagának küld
+                                    asset: Asset::Native,
+                                    amount: 100_000_000, 
+                                }),
                             }
-                        }
+                        ]).unwrap(),
+                        ext: TransactionExt::V0,
+                    };
+
+                    // // 1. Hálózati azonosító (Network ID) előállítása
+                    // let network_passphrase = "Test SDF Network ; September 2015";
+                    // let network_id = Sha256::digest(network_passphrase.as_bytes());
+
+                    // // 2. Az aláírandó "boríték" típusának meghatározása (Transaction = 2)
+                    // // A stellar-xdr-ben az EnvelopeType::Tx értéke 2.
+                    // // Ezt 4 bájton, Big Endian (hálózati) sorrendben kell az adatok elé fűzni.
+                    // let envelope_type_bytes = (2i32).to_be_bytes(); 
+
+                    // // 3. A tranzakció nyers XDR szerializációja
+                    // let tx_xdr = tx.to_xdr(Limits::none()).unwrap();
+
+                    // // 4. A végleges aláírandó csomag (Payload) összefűzése
+                    // let mut sig_payload = Vec::new();
+                    // sig_payload.extend_from_slice(&network_id);      // 32 bájt
+                    // sig_payload.extend_from_slice(&envelope_type_bytes); // 4 bájt
+                    // sig_payload.extend_from_slice(&tx_xdr);          // Változó hossz
+
+                    // // 5. Aláírás a SigningKey-vel (ed25519-dalek)
+                    // let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
+                    // // // Aláírás folyamata (Network ID + Payload + Sign)
+                    // // // 1. Network ID (SHA256 a passphrase-re)
+                    // // let network_passphrase = "Test SDF Network ; September 2015";
+                    // // let network_id = Sha256::digest(network_passphrase.as_bytes());
+
+                    // // // 2. Aláírandó payload összeállítása
+                    // // let mut sig_payload = Vec::new();
+                    // // sig_payload.extend_from_slice(&network_id);
+                    
+                    // // // FONTOS: Az EnvelopeType::Tx értéke 2, amit 4 bájton küldünk el
+                    // // // A 25.0.0-ban az EnvelopeType enum-ként is használható, de az értéke fixen 2
+                    // // sig_payload.extend_from_slice(&(2i32).to_be_bytes()); 
+                    // // //sig_payload.extend_from_slice(&(EnvelopeType::Tx as i32).to_be_bytes());
+                    // // // A tranzakció nyers XDR bájtai
+                    // // sig_payload.extend_from_slice(&tx.to_xdr(Limits::none()).unwrap());
+                    
+                    // // // 3. Aláírás a SigningKey-vel
+                    // // let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
+                    // let mut hint = [0u8; 4];
+                    // hint.copy_from_slice(&pub_bytes[28..]);
+
+                    // let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
+                    //     tx,
+                    //     signatures: VecM::try_from(vec![
+                    //         DecoratedSignature {
+                    //             hint: SignatureHint(hint),
+                    //             signature: Signature(BytesM::try_from(sig_bytes).unwrap()),
+                    //         }
+                    //     ]).unwrap(),
+                    // });
+
+                    // 1. Hálózat azonosítása (Testnet)
+                    let network_passphrase = "Test SDF Network ; September 2015";
+                    let network_id = Sha256::digest(network_passphrase.as_bytes());
+
+                    // 2. Aláírandó payload összeállítása (FONTOS A SORREND ÉS TÍPUS)
+                    let mut sig_payload = Vec::new();
+                    sig_payload.extend_from_slice(&network_id); // 32 bájt
+
+                    // A Stellar protokoll szerint a tranzakció típusa (EnvelopeTypeTx = 2) 
+                    // kötelezően 4 bájtos Big Endian integer.
+                    let envelope_type: i32 = 2; 
+                    sig_payload.extend_from_slice(&envelope_type.to_be_bytes());
+
+                    // Itt csak a TRANSACTION struktúrát szerializáljuk (nem az Envelope-ot!)
+                    let tx_bytes = tx.to_xdr(Limits::none()).unwrap();
+                    sig_payload.extend_from_slice(&tx_bytes);
+
+                    // 3. Aláírás generálása (ed25519-dalek 2.x)
+                    let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
+
+                    // 4. A származtatott publikus kulcs utolsó 4 bájtja (Hint)
+                    let mut hint_bytes = [0u8; 4];
+                    hint_bytes.copy_from_slice(&pub_bytes[pub_bytes.len() - 4..]);
+
+                    // 5. Boríték összeállítása
+                    let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
+                        tx: tx.clone(), // Fontos, hogy ugyanaz a tx legyen, amit aláírtunk!
+                        signatures: VecM::try_from(vec![
+                            DecoratedSignature {
+                                hint: SignatureHint(hint_bytes),
+                                signature: Signature(BytesM::try_from(sig_bytes).unwrap()),
+                            }
+                        ]).unwrap(),
+                    });
+
+                    match envelope.to_xdr_base64(Limits::none()) {
+                        Ok(xdr) => {
+                            generated_xdr.set(xdr);
+                            submission_status.set(format!("✅ XDR Kész! (Seq: {})", next_seq));
+                        },
+                        Err(e) => submission_status.set(format!("❌ XDR hiba: {:?}", e)),
                     }
-                } else {
-                    submission_status.set("❌ Hiba: Fiók nem található (aktiváld Friendbottal!)".to_string());
                 }
             }
         });
@@ -351,29 +444,6 @@ fn app() -> Element {
             public_key.set(pub_key_str);
             secret_key_hidden.set(Some(Zeroizing::new(raw_input)));
             input_value.set(String::new());
-        }
-    };
-
-    // --- Biztonságos Másolás ---
-    let copy_to_clipboard = move |_| {
-        if let Some(secret) = secret_key_hidden.read().as_ref() {
-            let secret_to_copy = secret.to_string();
-            if let Ok(mut clipboard) = Clipboard::new() {
-                let _ = clipboard.set_text(secret_to_copy);
-                clipboard_status.set("MÁSOLVA (30mp)".to_string());
-
-                spawn(async move {
-                    tokio::time::sleep(Duration::from_secs(30)).await;
-                    if let Ok(mut cb) = Clipboard::new() {
-                        if let Ok(content) = cb.get_text() {
-                            if content.starts_with('S') && content.len() == 56 {
-                                let _ = cb.set_text("".to_string());
-                            }
-                        }
-                    }
-                    clipboard_status.set("Másolás".to_string());
-                });
-            }
         }
     };
 
@@ -417,11 +487,13 @@ fn app() -> Element {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
             h2 { "Zsozso" }
 
+            // --- CÍM MEGJELENÍTÉSE ---
             div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
                 p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
                 code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
             }
 
+            // --- KULCSKEZELÉS GOMBOK ---
             div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
                 button { onclick: generate_key, "✨ Új Kulcs" }
                 input {
@@ -434,8 +506,9 @@ fn app() -> Element {
                 button { onclick: import_key, "📥 Import" }
             }
 
+            // --- TITKOS KULCS SZEKCIÓ (Csak ha van betöltve) ---
             if let Some(secret) = secret_key_hidden.read().as_ref() {
-                div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px;",
+                div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;",
                     div { style: "display: flex; gap: 10px;",
                         button {
                             onclick: move |_| show_secret.toggle(),
@@ -445,6 +518,12 @@ fn app() -> Element {
                             style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
                             onclick: copy_to_clipboard,
                             "{clipboard_status}"
+                        }
+                        // AKTIVÁLÓ GOMB
+                        button {
+                            style: "background: #17a2b8; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
+                            onclick: activate_account,
+                            "🚀 Aktiválás (Friendbot)"
                         }
                     }
 
@@ -456,49 +535,135 @@ fn app() -> Element {
                 }
             }
 
-            div { style: "display: flex; gap: 10px; margin-top: 20px;",
-                button { onclick: activate_account, "💾 Account aktiválása" }
-                button { onclick: save_action, "💾 Mentés az OS tárcába" }
-                button { onclick: load_action, "🔓 Betöltés (Biometria/Pass)" }
-            }
-
-            // Generáló gomb
+            // --- TRANZAKCIÓ GENERÁLÁSA ---
             button { 
-                style: "width: 100%; margin-top: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;",
+                style: "width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",
                 onclick: fetch_and_generate, 
                 "🛠 Tranzakció XDR Generálása" 
             }
 
-            if !generated_xdr.read().is_empty() {
-                div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px;",
+            // --- STÁTUSZ ÜZENET ---
+            p { style: "text-align: center; font-size: 0.9em; color: #495057; font-style: italic;", 
+                "{submission_status}" 
+            }
 
+            // --- GENERÁLT XDR BLOKK (Csak ha elkészült) ---
+            if !generated_xdr.read().is_empty() {
+                div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 1px solid #ced4da;",
                     div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
-                        span { style: "font-size: 0.8em; font-weight: bold; color: #495057;", "GENERÁLT XDR (Base64):" }
+                        span { style: "font-size: 0.8em; font-weight: bold;", "ALÁÍRT XDR:" }
                         button { 
-                            style: "font-size: 0.7em; padding: 4px 8px; cursor: pointer;",
+                            style: "font-size: 0.7em; padding: 4px 8px;",
                             onclick: copy_xdr_to_clipboard,
                             "{xdr_copy_status}"
                         }
                     }
                     pre { 
-                        style: "word-break: break-all; white-space: pre-wrap; font-size: 0.75em; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; max-height: 150px; overflow-y: auto;",
+                        style: "word-break: break-all; white-space: pre-wrap; font-size: 0.75em; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; max-height: 100px; overflow-y: auto;",
                         "{generated_xdr}" 
                     }
-                    p { style: "font-size: 0.7em; color: #6c757d; margin-top: 5px;", 
-                        "Tipp: Ezt az XDR-t beillesztheted a [Stellar Laboratory](https://laboratory.stellar.org) oldalán." 
-                    }
-
                     button { 
-                        style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;",
+                        style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold;",
                         onclick: submit_tx_action, 
-                        "🚀 Tranzakció Beküldése a Testnetre" 
-                    }
-                    
-                    p { style: "margin-top: 10px; font-size: 0.9em; text-align: center; color: #495057;",
-                        "{submission_status}"
+                        "🚀 Tranzakció BEKÜLDÉSE" 
                     }
                 }
             }
+
+            // --- MENTÉS / BETÖLTÉS ---
+            div { style: "display: flex; gap: 10px; margin-top: 30px;",
+                button { onclick: save_action, style: "flex: 1;", "💾 Mentés az OS tárcába" }
+                button { onclick: load_action, style: "flex: 1;", "🔓 Betöltés" }
+            }
         }
     }
+
+    // rsx! {
+    //     div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
+    //         h2 { "Zsozso" }
+
+    //         div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
+    //             p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
+    //             code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
+    //         }
+
+    //         div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
+    //             button { onclick: generate_key, "✨ Új Kulcs" }
+    //             input {
+    //                 style: "flex-grow: 1; padding: 5px;",
+    //                 r#type: "password",
+    //                 placeholder: "Importálás (S...)",
+    //                 value: "{input_value}",
+    //                 oninput: move |evt| input_value.set(evt.value())
+    //             }
+    //             button { onclick: import_key, "📥 Import" }
+    //         }
+
+    //         if let Some(secret) = secret_key_hidden.read().as_ref() {
+    //             div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px;",
+    //                 div { style: "display: flex; gap: 10px;",
+    //                     button {
+    //                         onclick: move |_| show_secret.toggle(),
+    //                         if *show_secret.read() { "🙈 Elrejtés" } else { "👁 Felfedés" }
+    //                     }
+    //                     button {
+    //                         style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
+    //                         onclick: copy_to_clipboard,
+    //                         "{clipboard_status}"
+    //                     }
+    //                 }
+
+    //                 if *show_secret.read() {
+    //                     p { style: "margin-top: 15px; font-family: monospace; word-break: break-all; background: white; padding: 10px;",
+    //                         "{secret.as_str()}"
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         div { style: "display: flex; gap: 10px; margin-top: 20px;",
+    //             button { onclick: activate_account, "💾 Account aktiválása" }
+    //             button { onclick: save_action, "💾 Mentés az OS tárcába" }
+    //             button { onclick: load_action, "🔓 Betöltés (Biometria/Pass)" }
+    //         }
+
+    //         // Generáló gomb
+    //         button { 
+    //             style: "width: 100%; margin-top: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;",
+    //             onclick: fetch_and_generate, 
+    //             "🛠 Tranzakció XDR Generálása" 
+    //         }
+
+    //         if !generated_xdr.read().is_empty() {
+    //             div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px;",
+
+    //                 div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
+    //                     span { style: "font-size: 0.8em; font-weight: bold; color: #495057;", "GENERÁLT XDR (Base64):" }
+    //                     button { 
+    //                         style: "font-size: 0.7em; padding: 4px 8px; cursor: pointer;",
+    //                         onclick: copy_xdr_to_clipboard,
+    //                         "{xdr_copy_status}"
+    //                     }
+    //                 }
+    //                 pre { 
+    //                     style: "word-break: break-all; white-space: pre-wrap; font-size: 0.75em; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; max-height: 150px; overflow-y: auto;",
+    //                     "{generated_xdr}" 
+    //                 }
+    //                 p { style: "font-size: 0.7em; color: #6c757d; margin-top: 5px;", 
+    //                     "Tipp: Ezt az XDR-t beillesztheted a [Stellar Laboratory](https://laboratory.stellar.org) oldalán." 
+    //                 }
+
+    //                 button { 
+    //                     style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;",
+    //                     onclick: submit_tx_action, 
+    //                     "🚀 Tranzakció Beküldése a Testnetre" 
+    //                 }
+                    
+    //                 p { style: "margin-top: 10px; font-size: 0.9em; text-align: center; color: #495057;",
+    //                     "{submission_status}"
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
