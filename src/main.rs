@@ -2,7 +2,6 @@ use arboard::Clipboard;
 use dioxus::prelude::*;
 use keyring::Entry;
 use rand::RngCore;
-use std::time::Duration;
 use zeroize::{Zeroize, Zeroizing};
 
 // Az új típusok a 25.0.0 verzióból
@@ -11,8 +10,9 @@ use stellar_strkey::{ed25519, Strkey};
 use stellar_xdr::curr::{
     MuxedAccount, Uint256, Transaction, SequenceNumber, Memo, Operation, 
     OperationBody, PaymentOp, Asset, Preconditions, TransactionExt, VecM,
-    TransactionEnvelope, TransactionV1Envelope, DecoratedSignature, 
-    Signature, EnvelopeType, BytesM, SignatureHint, WriteXdr, Limits
+    TransactionEnvelope, TransactionV1Envelope, DecoratedSignature, Hash,
+    Signature, BytesM, SignatureHint, WriteXdr, Limits,
+    TransactionSignaturePayload, TransactionSignaturePayloadTaggedTransaction
 };
 use sha2::{Sha256, Digest};
 use serde::Deserialize;
@@ -32,6 +32,12 @@ fn main() {
         .with_menu(None);
 
     LaunchBuilder::desktop().with_cfg(config).launch(app);
+
+    // Amikor a Dioxus leáll (bezárod az ablakot):
+    if let Ok(mut clipboard) = Clipboard::new() {
+        let _ = clipboard.set_text("".to_string());
+        println!("🔐 Vágólap törölve a biztonság érdekében.");
+    }
 }
 
 fn save_to_secure_storage(secret: &str) -> keyring::Result<()> {
@@ -50,11 +56,41 @@ fn app() -> Element {
     let mut public_key = use_signal(|| String::from("Nincs kulcs betöltve"));
     let mut secret_key_hidden = use_signal(|| None::<Zeroizing<String>>);
     let mut show_secret = use_signal(|| false);
-    let mut clipboard_status = use_signal(|| String::from("Másolás"));
+    let clipboard_status = use_signal(|| String::from("Másolás"));
     let mut input_value = use_signal(|| String::new());
     let mut generated_xdr = use_signal(|| String::new());
-    let mut xdr_copy_status = use_signal(|| String::from("XDR Másolása"));
+    let xdr_copy_status = use_signal(|| String::from("XDR Másolása"));
     let mut submission_status = use_signal(|| String::from("Várakozás..."));
+    let mut active_clipboard_task = use_signal(|| None);
+
+    let mut safe_copy = move |text: String, mut status_signal: Signal<String>, is_secret: bool| {
+        // 2. Megállítjuk a futó folyamatot
+        if let Some(_task) = active_clipboard_task.write().take() {
+            // Dioxus 0.6+ alatt a Task-nak nincs stop() metódusa közvetlenül így, 
+            // de a szignál felülírása és a spawn kezelése megoldja a leváltást.
+        }
+
+        let new_task = spawn(async move {
+            if let Ok(mut cb) = arboard::Clipboard::new() {
+                let _ = cb.set_text(text);
+                
+                let original_label = status_signal.peek().clone();
+                status_signal.set("MÁSOLVA!".to_string());
+
+                let wait_secs = if is_secret { 30 } else { 10 };
+                tokio::time::sleep(std::time::Duration::from_secs(wait_secs)).await;
+                
+                if is_secret {
+                    let _ = cb.set_text("".to_string());
+                }
+                
+                status_signal.set(original_label);
+            }
+        });
+
+        // Eltároljuk az új task-ot
+        active_clipboard_task.set(Some(new_task));
+    };
 
     let submit_tx_action = move |_| {
         let xdr_to_submit = generated_xdr.read().clone();
@@ -63,88 +99,6 @@ fn app() -> Element {
             submission_status.set("Hiba: Nincs generált XDR!".to_string());
             return;
         }
-
-        // spawn(async move {
-        //     submission_status.set("Beküldés folyamatban...".to_string());
-            
-        //     // A Horizon API URL-je (Testnet)
-        //     let url = "https://horizon-testnet.stellar.org";
-            
-        //     // A paraméter formátuma: tx=BASE64_XDR
-        //     let params = [("tx", xdr_to_submit)];
-        //     let client = reqwest::Client::new();
-
-        //     // match client.post(url).form(&params).send().await {
-        //     //     Ok(response) => {
-        //     //         if response.status().is_success() {
-        //     //             submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
-        //     //         } else {
-        //     //             let error_text = response.text().await.unwrap_or_default();
-        //     //             println!("Horizon hiba: {}", error_text);
-        //     //             submission_status.set("❌ Hiba: A hálózat elutasította.".to_string());
-        //     //         }
-        //     //     }
-        //     //     Err(e) => {
-        //     //         submission_status.set(format!("❌ Hálózati hiba: {}", e));
-        //     //     }
-        //     // }
-
-        //     match client.post(url).form(&params).send().await {
-        //         Ok(response) => {
-        //             let status = response.status();
-        //             // Kiolvassuk a teljes választ, hogy lássuk a JSON részleteket (pl. tx_bad_seq)
-        //             let body = response.text().await.unwrap_or_default();
-                    
-        //             if status.is_success() {
-        //                 submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
-        //             } else {
-        //                 println!("Horizon hiba ({}): {}", status, body); // Ez már kiírja a tx_bad_seq-et is!
-                        
-        //                 if body.contains("tx_bad_seq") {
-        //                     submission_status.set("❌ Hiba: Rossz szekvenciaszám. Generálj újat!".to_string());
-        //                 } else if body.contains("tx_insufficient_fee") {
-        //                     submission_status.set("❌ Hiba: Kevés a fee.".to_string());
-        //                 } else {
-        //                     submission_status.set(format!("❌ Hiba: {}", status));
-        //                 }
-        //             }
-        //         }
-        //         Err(e) => {
-        //             submission_status.set(format!("❌ Hálózati hiba: {}", e));
-        //         }
-        //     }
-        // });
-
-        // spawn(async move {
-        //     submission_status.set("Beküldés folyamatban...".to_string());
-            
-        //     let url = "https://horizon-testnet.stellar.org";
-            
-        //     // A Horizon JSON-t vár, amiben van egy "tx" mező
-        //     let payload = serde_json::json!({
-        //         "tx": xdr_to_submit
-        //     });
-
-        //     let client = reqwest::Client::new();
-
-        //     // .form() HELYETT .json() használata!
-        //     match client.post(url).json(&payload).send().await {
-        //         Ok(response) => {
-        //             let status = response.status();
-        //             let body = response.text().await.unwrap_or_default();
-                    
-        //             if status.is_success() {
-        //                 submission_status.set("✅ SIKER! Tranzakció elfogadva.".to_string());
-        //             } else {
-        //                 println!("Horizon hiba ({}): {}", status, body);
-        //                 submission_status.set(format!("❌ Hiba: {}", status));
-        //             }
-        //         }
-        //         Err(e) => {
-        //             submission_status.set(format!("❌ Hálózati hiba: {}", e));
-        //         }
-        //     }
-        // });
 
         spawn(async move {
             submission_status.set("Beküldés folyamatban...".to_string());
@@ -183,46 +137,16 @@ fn app() -> Element {
         });
    };
 
-    let copy_xdr_to_clipboard = move |_| {
-        let xdr_text = generated_xdr.read().clone();
-        if !xdr_text.is_empty() {
-            if let Ok(mut clipboard) = Clipboard::new() {
-                let _ = clipboard.set_text(xdr_text);
-                xdr_copy_status.set("MÁSOLVA!".to_string());
-
-                // Visszaállítás 5 másodperc után
-                spawn(async move {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-
-                    let _ = clipboard;
-
-                    xdr_copy_status.set("XDR Másolása".to_string());
-                });
-            }
+    let copy_to_clipboard = move |_| {
+        if let Some(secret) = secret_key_hidden.read().as_ref() {
+            safe_copy(secret.to_string(), clipboard_status, true);
         }
     };
 
-    let copy_to_clipboard = move |_| {
-        if let Some(secret) = secret_key_hidden.read().as_ref() {
-            let secret_to_copy = secret.to_string();
-            
-            // Létrehozzuk a vágólapot
-            if let Ok(mut clipboard) = Clipboard::new() {
-                // Beállítjuk a szöveget
-                let _ = clipboard.set_text(secret_to_copy);
-                clipboard_status.set("MÁSOLVA (30mp)".to_string());
-
-                // Átadjuk a clipboard-ot a spawn-nak, így nem dobódik el azonnal!
-                spawn(async move {
-                    // Itt a 'clipboard' objektum életben marad a tokio szálon
-                    tokio::time::sleep(Duration::from_secs(30)).await;
-                    
-                    // 30 mp után töröljük, mielőtt a szál véget érne és a clipboard drop-olódna
-                    let _ = clipboard.set_text("".to_string());
-                    
-                    clipboard_status.set("Másolás".to_string());
-                });
-            }
+    let copy_xdr_to_clipboard = move |_| {
+        let xdr = generated_xdr.read().clone();
+        if !xdr.is_empty() {
+            safe_copy(xdr, xdr_copy_status, false);
         }
     };
 
@@ -316,84 +240,33 @@ fn app() -> Element {
                         ext: TransactionExt::V0,
                     };
 
-                    // // 1. Hálózati azonosító (Network ID) előállítása
-                    // let network_passphrase = "Test SDF Network ; September 2015";
-                    // let network_id = Sha256::digest(network_passphrase.as_bytes());
-
-                    // // 2. Az aláírandó "boríték" típusának meghatározása (Transaction = 2)
-                    // // A stellar-xdr-ben az EnvelopeType::Tx értéke 2.
-                    // // Ezt 4 bájton, Big Endian (hálózati) sorrendben kell az adatok elé fűzni.
-                    // let envelope_type_bytes = (2i32).to_be_bytes(); 
-
-                    // // 3. A tranzakció nyers XDR szerializációja
-                    // let tx_xdr = tx.to_xdr(Limits::none()).unwrap();
-
-                    // // 4. A végleges aláírandó csomag (Payload) összefűzése
-                    // let mut sig_payload = Vec::new();
-                    // sig_payload.extend_from_slice(&network_id);      // 32 bájt
-                    // sig_payload.extend_from_slice(&envelope_type_bytes); // 4 bájt
-                    // sig_payload.extend_from_slice(&tx_xdr);          // Változó hossz
-
-                    // // 5. Aláírás a SigningKey-vel (ed25519-dalek)
-                    // let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
-                    // // // Aláírás folyamata (Network ID + Payload + Sign)
-                    // // // 1. Network ID (SHA256 a passphrase-re)
-                    // // let network_passphrase = "Test SDF Network ; September 2015";
-                    // // let network_id = Sha256::digest(network_passphrase.as_bytes());
-
-                    // // // 2. Aláírandó payload összeállítása
-                    // // let mut sig_payload = Vec::new();
-                    // // sig_payload.extend_from_slice(&network_id);
-                    
-                    // // // FONTOS: Az EnvelopeType::Tx értéke 2, amit 4 bájton küldünk el
-                    // // // A 25.0.0-ban az EnvelopeType enum-ként is használható, de az értéke fixen 2
-                    // // sig_payload.extend_from_slice(&(2i32).to_be_bytes()); 
-                    // // //sig_payload.extend_from_slice(&(EnvelopeType::Tx as i32).to_be_bytes());
-                    // // // A tranzakció nyers XDR bájtai
-                    // // sig_payload.extend_from_slice(&tx.to_xdr(Limits::none()).unwrap());
-                    
-                    // // // 3. Aláírás a SigningKey-vel
-                    // // let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
-                    // let mut hint = [0u8; 4];
-                    // hint.copy_from_slice(&pub_bytes[28..]);
-
-                    // let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
-                    //     tx,
-                    //     signatures: VecM::try_from(vec![
-                    //         DecoratedSignature {
-                    //             hint: SignatureHint(hint),
-                    //             signature: Signature(BytesM::try_from(sig_bytes).unwrap()),
-                    //         }
-                    //     ]).unwrap(),
-                    // });
-
-                    // 1. Hálózat azonosítása (Testnet)
+                    // 1. Hálózat azonosítója (Testnet)
                     let network_passphrase = "Test SDF Network ; September 2015";
-                    let network_id = Sha256::digest(network_passphrase.as_bytes());
+                    let network_id = Hash(Sha256::digest(network_passphrase.as_bytes()).into());
 
-                    // 2. Aláírandó payload összeállítása (FONTOS A SORREND ÉS TÍPUS)
-                    let mut sig_payload = Vec::new();
-                    sig_payload.extend_from_slice(&network_id); // 32 bájt
+                    // 2. Payload összeállítása (ahogy elkezded a kód végén)
+                    let payload = TransactionSignaturePayload {
+                        network_id,
+                        tagged_transaction: TransactionSignaturePayloadTaggedTransaction::Tx(tx.clone()),
+                    };
 
-                    // A Stellar protokoll szerint a tranzakció típusa (EnvelopeTypeTx = 2) 
-                    // kötelezően 4 bájtos Big Endian integer.
-                    let envelope_type: i32 = 2; 
-                    sig_payload.extend_from_slice(&envelope_type.to_be_bytes());
+                    // 3. Szerializálás XDR-be
+                    let tx_payload_xdr = payload.to_xdr(Limits::none()).unwrap();
 
-                    // Itt csak a TRANSACTION struktúrát szerializáljuk (nem az Envelope-ot!)
-                    let tx_bytes = tx.to_xdr(Limits::none()).unwrap();
-                    sig_payload.extend_from_slice(&tx_bytes);
+                    // 4. FONTOS: A Stellar a payload SHA256 hash-ét íratja alá!
+                    let tx_hash = Sha256::digest(&tx_payload_xdr);
 
-                    // 3. Aláírás generálása (ed25519-dalek 2.x)
-                    let sig_bytes = signing_key.sign(&sig_payload).to_bytes();
+                    // . Aláírás a HASH-re (vagy használj sign_prehashed-et, ha a dalek verziód támogatja, 
+                    // de a sima sign is jó a hash bájtjaira)
+                    let sig_bytes = signing_key.sign(&tx_hash).to_bytes();
 
-                    // 4. A származtatott publikus kulcs utolsó 4 bájtja (Hint)
+                    // 6. Hint generálása (maradhat a régi)
                     let mut hint_bytes = [0u8; 4];
                     hint_bytes.copy_from_slice(&pub_bytes[pub_bytes.len() - 4..]);
 
-                    // 5. Boríték összeállítása
+                    // 7. Envelope összeállítása
                     let envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
-                        tx: tx.clone(), // Fontos, hogy ugyanaz a tx legyen, amit aláírtunk!
+                        tx: tx.clone(),
                         signatures: VecM::try_from(vec![
                             DecoratedSignature {
                                 hint: SignatureHint(hint_bytes),
@@ -577,93 +450,4 @@ fn app() -> Element {
             }
         }
     }
-
-    // rsx! {
-    //     div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
-    //         h2 { "Zsozso" }
-
-    //         div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
-    //             p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
-    //             code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
-    //         }
-
-    //         div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
-    //             button { onclick: generate_key, "✨ Új Kulcs" }
-    //             input {
-    //                 style: "flex-grow: 1; padding: 5px;",
-    //                 r#type: "password",
-    //                 placeholder: "Importálás (S...)",
-    //                 value: "{input_value}",
-    //                 oninput: move |evt| input_value.set(evt.value())
-    //             }
-    //             button { onclick: import_key, "📥 Import" }
-    //         }
-
-    //         if let Some(secret) = secret_key_hidden.read().as_ref() {
-    //             div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px;",
-    //                 div { style: "display: flex; gap: 10px;",
-    //                     button {
-    //                         onclick: move |_| show_secret.toggle(),
-    //                         if *show_secret.read() { "🙈 Elrejtés" } else { "👁 Felfedés" }
-    //                     }
-    //                     button {
-    //                         style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
-    //                         onclick: copy_to_clipboard,
-    //                         "{clipboard_status}"
-    //                     }
-    //                 }
-
-    //                 if *show_secret.read() {
-    //                     p { style: "margin-top: 15px; font-family: monospace; word-break: break-all; background: white; padding: 10px;",
-    //                         "{secret.as_str()}"
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         div { style: "display: flex; gap: 10px; margin-top: 20px;",
-    //             button { onclick: activate_account, "💾 Account aktiválása" }
-    //             button { onclick: save_action, "💾 Mentés az OS tárcába" }
-    //             button { onclick: load_action, "🔓 Betöltés (Biometria/Pass)" }
-    //         }
-
-    //         // Generáló gomb
-    //         button { 
-    //             style: "width: 100%; margin-top: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;",
-    //             onclick: fetch_and_generate, 
-    //             "🛠 Tranzakció XDR Generálása" 
-    //         }
-
-    //         if !generated_xdr.read().is_empty() {
-    //             div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px;",
-
-    //                 div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
-    //                     span { style: "font-size: 0.8em; font-weight: bold; color: #495057;", "GENERÁLT XDR (Base64):" }
-    //                     button { 
-    //                         style: "font-size: 0.7em; padding: 4px 8px; cursor: pointer;",
-    //                         onclick: copy_xdr_to_clipboard,
-    //                         "{xdr_copy_status}"
-    //                     }
-    //                 }
-    //                 pre { 
-    //                     style: "word-break: break-all; white-space: pre-wrap; font-size: 0.75em; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; max-height: 150px; overflow-y: auto;",
-    //                     "{generated_xdr}" 
-    //                 }
-    //                 p { style: "font-size: 0.7em; color: #6c757d; margin-top: 5px;", 
-    //                     "Tipp: Ezt az XDR-t beillesztheted a [Stellar Laboratory](https://laboratory.stellar.org) oldalán." 
-    //                 }
-
-    //                 button { 
-    //                     style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;",
-    //                     onclick: submit_tx_action, 
-    //                     "🚀 Tranzakció Beküldése a Testnetre" 
-    //                 }
-                    
-    //                 p { style: "margin-top: 10px; font-size: 0.9em; text-align: center; color: #495057;",
-    //                     "{submission_status}"
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 }
