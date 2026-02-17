@@ -1,0 +1,28 @@
+[package]
+name = "zsozso"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# A Dioxus alapcsomag
+#dioxus = { version = "0.5", features = ["desktop", "router"] }
+#dioxus = { version = "0.5", features = ["web"] }
+dioxus = { version = "0.7.3", features = ["desktop"] }
+stellar-base = "0.4"      # A standard kulcskezelő könyvtár
+stellar_sdk = "0.1.4"
+rand = "0.8"
+zeroize = { version = "1.7", features = ["derive"] }
+arboard = "3.3" # Vágólap kezelő
+tokio = { version = "1", features = ["time", "rt-multi-thread"] }
+# keyring = "3.2" # Biztonságos tárolás az OS kulcstartójában
+keyring = { version = "3.2", features = ["sync-secret-service", "linux-native"] }
+# Opcionális: Ha később logolni akarsz (mint a console.log JS-ben)
+tracing = "0.1"
+tracing-wasm = { version = "0.2", optional = true }
+
+[profile.release]
+# Kicsi és gyors binárist csinál, kiszedi a felesleget (LTO)
+opt-level = "z"     # Méretre optimalizálás
+lto = true          # Link Time Optimization (lassú fordítás, gyors futás)
+codegen-units = 1   # Még több optimalizáció
+panic = "abort"     # Kisebb binárisméret (nincs stack unwind)
