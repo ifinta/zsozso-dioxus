@@ -7,15 +7,15 @@ use std::time::Duration;
 use zeroize::{Zeroize, Zeroizing};
 
 use stellar_base::{
-    amount::Amount,
-    amount::Stroops,
+    amount::{Amount, Stroops},
     asset::Asset,
-    crypto::KeyPair,
+    crypto::{KeyPair, MuxedAccount},
     memo::Memo,
     network::Network,
+    operations::Operation,
     operations::PaymentOperation,
-    Operation::Payment,
-    transaction::{Transaction, TransactionBuilder}, xdr::XDRSerialize
+    transaction::{Transaction, TransactionBuilder},
+    xdr::{PaymentOp, XDRSerialize},
 };
 
 fn main() {
@@ -51,39 +51,6 @@ fn app() -> Element {
     let mut show_secret = use_signal(|| false);
     let mut clipboard_status = use_signal(|| String::from("Másolás"));
     let mut input_value = use_signal(|| String::new());
-    let mut generated_xdr = use_signal(|| String::new());
-
-    // XDR Generáló funkció
-    let create_xdr_action = move |_| {
-        if let Some(secret_str) = secret_key_hidden.read().as_ref() {
-            if let Ok(kp) = KeyPair::from_str(secret_str.as_str()) {
-                // 1. Megadjuk a forrás accountot (G...)
-                let source_account = kp.public_key().clone();
-
-                // 2. Tranzakció építése (Példa: 10 XLM küldése egy teszt címre)
-                // Megjegyzés: A sequence number-t élesben a hálózatról kell lekérni!
-                let sequence_number = 123456789;
-
-                // let payment_op = Payment(PaymentOperation {
-                //     destination: kp.public_key().clone(),
-                //     asset: Asset::Native,
-                //     amount: Amount::from_str("10.0").unwrap(),
-                // });
-
-                let tx_result = TransactionBuilder::new(source_account, sequence_number, Stroops::new(100i64))
-                    //.add_operation(payment_op)
-                    .into_transaction();
-
-                // 3. XDR kód kinyerése (Base64)
-                if let Ok(tx) = tx_result {
-                    if let Ok(xdr) = tx.into_envelope().xdr_base64() {
-                        generated_xdr.set(xdr);
-                        println!("XDR Sikeresen generálva!");
-                    }
-                }
-            }
-        }
-    };
 
     // --- Generálás ---
     let generate_key = move |_| {
@@ -164,74 +131,54 @@ fn app() -> Element {
     };
 
     rsx! {
-            div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
-                h2 { "Zsozso" }
+        div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
+            h2 { "Zsozso" }
 
-                div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
-                    p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
-                    code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
+            div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
+                p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
+                code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
+            }
+
+            div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
+                button { onclick: generate_key, "✨ Új Kulcs" }
+                input {
+                    style: "flex-grow: 1; padding: 5px;",
+                    r#type: "password",
+                    placeholder: "Importálás (S...)",
+                    value: "{input_value}",
+                    oninput: move |evt| input_value.set(evt.value())
                 }
+                button { onclick: import_key, "📥 Import" }
+            }
 
-                div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
-                    button { onclick: generate_key, "✨ Új Kulcs" }
-                    input {
-                        style: "flex-grow: 1; padding: 5px;",
-                        r#type: "password",
-                        placeholder: "Importálás (S...)",
-                        value: "{input_value}",
-                        oninput: move |evt| input_value.set(evt.value())
-                    }
-                    button { onclick: import_key, "📥 Import" }
-                }
-
-                if let Some(secret) = secret_key_hidden.read().as_ref() {
-                    div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px;",
-                        div { style: "display: flex; gap: 10px;",
-                            button {
-                                onclick: move |_| show_secret.toggle(),
-                                if *show_secret.read() { "🙈 Elrejtés" } else { "👁 Felfedés" }
-                            }
-                            button {
-                                style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
-                                onclick: copy_to_clipboard,
-                                "{clipboard_status}"
-                            }
+            if let Some(secret) = secret_key_hidden.read().as_ref() {
+                div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px;",
+                    div { style: "display: flex; gap: 10px;",
+                        button {
+                            onclick: move |_| show_secret.toggle(),
+                            if *show_secret.read() { "🙈 Elrejtés" } else { "👁 Felfedés" }
                         }
-
-                        if *show_secret.read() {
-                            p { style: "margin-top: 15px; font-family: monospace; word-break: break-all; background: white; padding: 10px;",
-                                "{secret.as_str()}"
-                            }
+                        button {
+                            style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
+                            onclick: copy_to_clipboard,
+                            "{clipboard_status}"
                         }
                     }
-                }
 
-                div { style: "display: flex; gap: 10px;",
-                    button { onclick: save_action, "💾 Mentés az OS tárcába" }
-                    button { onclick: load_action, "🔓 Betöltés (Biometria/Pass)" }
-                }
-
-                hr { margin: "20px 0" }
-
-                button {
-                    style: "background: #6f42c1; color: white; padding: 10px;",
-                    onclick: create_xdr_action,
-                    "📝 Tranzakció Tervezése (10 XLM)"
-                }
-
-                if !generated_xdr.read().is_empty() {
-                    div { style: "margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px;",
-                        p { b { "Aláíratlan XDR csomag:" } }
-                        code {
-                            style: "display: block; word-break: break-all; font-size: 0.85em; background: white; padding: 10px; border: 1px solid #ccc;",
-                            "{generated_xdr}"
-                        }
-                        p {
-                            style: "font-size: 0.8em; color: #666;",
-                            "Ezt az XDR-t bármilyen külső eszközzel (pl. Stellar Laboratory) ellenőrizheted."
+                    if *show_secret.read() {
+                        p { style: "margin-top: 15px; font-family: monospace; word-break: break-all; background: white; padding: 10px;",
+                            "{secret.as_str()}"
                         }
                     }
                 }
             }
+
+            div { style: "display: flex; gap: 10px;",
+                button { onclick: save_action, "💾 Mentés az OS tárcába" }
+                button { onclick: load_action, "🔓 Betöltés (Biometria/Pass)" }
+            }
+
+            hr { margin: "20px 0" }
         }
+    }
 }
