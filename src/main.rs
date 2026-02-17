@@ -11,7 +11,7 @@ use stellar_xdr::curr::{
     MuxedAccount, Uint256, Transaction, SequenceNumber, Memo, Operation, 
     OperationBody, PaymentOp, Asset, Preconditions, TransactionExt, VecM,
     TransactionEnvelope, TransactionV1Envelope, DecoratedSignature, Hash,
-    Signature, BytesM, SignatureHint, WriteXdr, Limits,
+    Signature, BytesM, SignatureHint, WriteXdr, Limits, TimeBounds, TimePoint,
     TransactionSignaturePayload, TransactionSignaturePayloadTaggedTransaction
 };
 use sha2::{Sha256, Digest};
@@ -36,6 +36,9 @@ fn main() {
     // Amikor a Dioxus leáll (bezárod az ablakot):
     if let Ok(mut clipboard) = Clipboard::new() {
         let _ = clipboard.set_text("".to_string());
+        // 2. FONTOS: Várjunk egy kicsit, hogy az OS feldolgozza a kérést!
+        // Enélkül a program kilép, mielőtt a törlés érvénybe lépne.
+        std::thread::sleep(std::time::Duration::from_millis(500));
         println!("🔐 Vágólap törölve a biztonság érdekében.");
     }
 }
@@ -64,12 +67,15 @@ fn app() -> Element {
     let mut active_clipboard_task = use_signal(|| None);
 
     let mut safe_copy = move |text: String, mut status_signal: Signal<String>, is_secret: bool| {
-        // 2. Megállítjuk a futó folyamatot
+        // A write().take() kiveszi a régi Task-ot (ha volt)
         if let Some(_task) = active_clipboard_task.write().take() {
-            // Dioxus 0.6+ alatt a Task-nak nincs stop() metódusa közvetlenül így, 
-            // de a szignál felülírása és a spawn kezelése megoldja a leváltást.
+            // A Dioxus 0.7 Task-nak nincs .stop() metódusa, 
+            // de az eldobással (drop) a Runtime megállíthatja.
+            // Ha hibát dobna a .stop(), egyszerűen töröld ezt a sort:
+            // task.stop(); 
         }
 
+        // A spawn visszatérési értéke határozza meg a szignál típusát
         let new_task = spawn(async move {
             if let Ok(mut cb) = arboard::Clipboard::new() {
                 let _ = cb.set_text(text);
@@ -82,15 +88,26 @@ fn app() -> Element {
                 
                 if is_secret {
                     let _ = cb.set_text("".to_string());
+                    std::thread::sleep(std::time::Duration::from_millis(500));
                 }
                 
                 status_signal.set(original_label);
             }
         });
 
-        // Eltároljuk az új task-ot
+        // Itt történik a "típus-varázslat": a fordító látja, 
+        // hogy a szignálba egy Task kerül.
         active_clipboard_task.set(Some(new_task));
     };
+
+    // Ez a hook lefut, amikor az App "meghal" (bezárják)
+    use_drop(move || {
+        // Platformfüggetlen ürítés
+        if let Ok(mut cb) = arboard::Clipboard::new() {
+            let _ = cb.set_text("".to_string());
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+    });
 
     let submit_tx_action = move |_| {
         let xdr_to_submit = generated_xdr.read().clone();
@@ -220,12 +237,24 @@ fn app() -> Element {
                 if let Ok(Strkey::PrivateKeyEd25519(priv_key)) = Strkey::from_string(&secret_val) {
                     let signing_key = ed25519_dalek::SigningKey::from_bytes(&priv_key.0);
                     let pub_bytes = signing_key.verifying_key().to_bytes();
+
+                    // Szükséged lesz az aktuális időre
+                    let current_unix_time = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs();
+
+                    // Állítsunk be egy 5 perces ablakot (300 másodperc)
+                    let time_bounds = TimeBounds {
+                        min_time: TimePoint(0),           // 0 = azonnal érvényes
+                        max_time: TimePoint(current_unix_time + 300), 
+                    };
                     
                     let tx = Transaction {
                         source_account: MuxedAccount::Ed25519(Uint256(pub_bytes)),
                         fee: 100,
                         seq_num: SequenceNumber(next_seq),
-                        cond: Preconditions::None,
+                        cond: Preconditions::Time(time_bounds),
                         memo: Memo::None,
                         operations: VecM::try_from(vec![
                             Operation {
@@ -408,9 +437,15 @@ fn app() -> Element {
                 }
             }
 
+            // --- MENTÉS / BETÖLTÉS ---
+            div { style: "display: flex; gap: 10px; margin-top: 15px;",
+                button { onclick: save_action, style: "flex: 1;", "💾 Mentés az OS tárcába" }
+                button { onclick: load_action, style: "flex: 1;", "🔓 Betöltés" }
+            }
+
             // --- TRANZAKCIÓ GENERÁLÁSA ---
             button { 
-                style: "width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",
+                style: "margin-top: 30px; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",
                 onclick: fetch_and_generate, 
                 "🛠 Tranzakció XDR Generálása" 
             }
@@ -441,12 +476,6 @@ fn app() -> Element {
                         "🚀 Tranzakció BEKÜLDÉSE" 
                     }
                 }
-            }
-
-            // --- MENTÉS / BETÖLTÉS ---
-            div { style: "display: flex; gap: 10px; margin-top: 30px;",
-                button { onclick: save_action, style: "flex: 1;", "💾 Mentés az OS tárcába" }
-                button { onclick: load_action, style: "flex: 1;", "🔓 Betöltés" }
             }
         }
     }
