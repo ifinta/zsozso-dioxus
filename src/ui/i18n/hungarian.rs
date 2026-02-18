@@ -125,7 +125,7 @@ impl UiI18n for HungarianUi {
         "ALÁÍRT XDR:"
     }
 
-    fn lbl_import_placeholder(&self) -> &'static str {
+    fn lbl_import_ph(&self) -> &'static str {
         "Importálás (S...)"
     }
     

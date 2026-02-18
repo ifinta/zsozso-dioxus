@@ -221,7 +221,7 @@ pub fn app() -> Element {
                 input {
                     style: "flex-grow: 1; padding: 5px;",
                     r#type: "password",
-                    placeholder: "{i18n.lbl_import_placeholder()}",
+                    placeholder: "{i18n.lbl_import_ph()}",
                     value: "{input_value}",
                     oninput: move |evt| input_value.set(evt.value())
                 }

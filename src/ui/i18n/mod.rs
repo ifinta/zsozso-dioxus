@@ -47,7 +47,7 @@ pub trait UiI18n {
     // UI labels
     fn lbl_active_address(&self) -> &'static str;
     fn lbl_signed_xdr(&self) -> &'static str;
-    fn lbl_import_placeholder(&self) -> &'static str;
+    fn lbl_import_ph(&self) -> &'static str;
     
     // Network labels
     fn net_testnet_label(&self) -> &'static str;

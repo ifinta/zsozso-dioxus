@@ -125,7 +125,7 @@ impl UiI18n for EnglishUi {
         "SIGNED XDR:"
     }
 
-    fn lbl_import_placeholder(&self) -> &'static str {
+    fn lbl_import_ph(&self) -> &'static str {
         "Import (S...)"
     }
     
