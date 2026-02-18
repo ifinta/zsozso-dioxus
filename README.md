@@ -78,8 +78,8 @@ Every user-facing string in the application is abstracted behind i18n traits, wi
 | macOS | 🔜 Planned | `desktop` |
 | Windows | 🔜 Planned | `desktop` |
 | Web (WASM) | ✅ Supported | `web` |
-| iOS | 🔜 Planned | — |
-| Android | 🔜 Planned | — |
+| iOS / Android (Capacitor) | 📦 Packagable | `web` (wrapped in native WebView) |
+| iOS / Android (PWA) | 📲 Installable | `web` (no app store needed) |
 
 ## Prerequisites
 
@@ -140,7 +140,9 @@ dx serve --platform web
 dx build --release --platform web
 # Output in target/dx/zsozso/release/web/public/
 
-# use i.e. npx to serve it
+# Serve the release build locally
+python3 -m http.server 8080 -d target/dx/zsozso/release/web/public/
+# Or with npx:
 npx serve target/dx/zsozso/release/web/public/ -l 8080
 ```
 
@@ -152,6 +154,160 @@ npx serve target/dx/zsozso/release/web/public/ -l 8080
 | `web` | Browser app via WASM — Dioxus web, navigator.clipboard, gloo-timers, browser localStorage |
 
 > **Note:** The `desktop` and `web` features are mutually exclusive. Use `--no-default-features --features web` if building manually with `cargo` instead of `dx`.
+
+## Mobile Deployment
+
+The WASM web build can be deployed to iOS and Android without modifying any Rust code. Two approaches are available:
+
+### Option A: Capacitor (Native App Store Package)
+
+[Capacitor](https://capacitorjs.com/) wraps the web build in a native WebView, producing a real `.apk` (Android) or `.ipa` (iOS) that can be submitted to the App Store / Play Store.
+
+#### Prerequisites
+
+```bash
+# Node.js (v18+) and npm
+# https://nodejs.org/
+
+# Android Studio (for Android builds)
+# https://developer.android.com/studio
+
+# Xcode (for iOS builds, macOS only)
+# https://developer.apple.com/xcode/
+```
+
+#### Setup & Build
+
+```bash
+# 1. Build the WASM release
+dx build --release --platform web
+
+# 2. Copy the output to a dedicated dist/ directory
+cp -r target/dx/zsozso/release/web/public dist
+
+# 3. Initialize Capacitor
+npm init -y
+npm install @capacitor/core @capacitor/cli
+npx cap init zsozso com.ifinta.zsozso --web-dir dist
+
+# 4. Add platforms
+npx cap add android
+npx cap add ios
+
+# 5. Sync the web build into the native projects
+npx cap sync
+
+# 6. Open in native IDE
+npx cap open android   # Opens Android Studio
+npx cap open ios       # Opens Xcode (macOS only)
+```
+
+#### Update Workflow
+
+After making changes and rebuilding the WASM output:
+
+```bash
+dx build --release --platform web
+cp -r target/dx/zsozso/release/web/public dist
+npx cap sync
+```
+
+> **Note:** Native device APIs (e.g. secure storage, biometrics) can be added via [Capacitor plugins](https://capacitorjs.com/docs/plugins). The browser `localStorage` store will work out of the box inside the Capacitor WebView.
+
+### Option B: Progressive Web App (PWA)
+
+A PWA allows users to "install" the app directly from the browser to their home screen — no app store required. It works on iOS Safari, Android Chrome, and desktop browsers.
+
+#### Setup
+
+Add the following files to your web build output:
+
+**`manifest.json`** — place in the project root or `assets/` directory so it's included in the build output:
+
+```json
+{
+  "name": "Zsozso Wallet",
+  "short_name": "Zsozso",
+  "description": "Stellar wallet for the Iceberg Protocol ecosystem",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#17a2b8",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+```
+
+**`sw.js`** — a minimal service worker for offline caching:
+
+```javascript
+const CACHE_NAME = 'zsozso-v1';
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll([
+        '/',
+        '/index.html',
+        '/assets/dioxus/zsozso.js',
+        '/assets/dioxus/zsozso_bg.wasm',
+      ])
+    )
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
+});
+```
+
+Add these lines to the `<head>` section of your `index.html`:
+
+```html
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#17a2b8">
+```
+
+And register the service worker at the end of `<body>`:
+
+```html
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+</script>
+```
+
+#### How Users Install It
+
+- **Android Chrome** — Menu (⋮) → "Add to Home screen" or "Install app"
+- **iOS Safari** — Share (↑) → "Add to Home Screen"
+- **Desktop Chrome/Edge** — Address bar install icon or Menu → "Install Zsozso Wallet"
+
+### Comparison
+
+| | Capacitor | PWA |
+|---|---|---|
+| **App Store / Play Store** | ✅ Yes | ❌ No |
+| **Offline support** | ✅ Built-in (bundled) | ✅ Via service worker |
+| **Native device APIs** | ✅ Via plugins | ⚠️ Limited (Web APIs only) |
+| **Installation** | Download from store | "Add to Home Screen" from browser |
+| **Update mechanism** | Store update | Automatic (on next visit) |
+| **Build complexity** | Moderate (needs Android Studio / Xcode) | Very low (just static files) |
+| **Rust code changes** | None | None |
 
 ## Related Repositories
 
