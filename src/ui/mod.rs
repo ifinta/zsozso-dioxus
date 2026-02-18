@@ -1,21 +1,27 @@
 mod clipboard;
+pub mod i18n;
 
 use dioxus::prelude::*;
 use zeroize::Zeroizing;
 
+use crate::i18n::Language;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::{Store, KeyringStore};
 use clipboard::safe_copy;
+use i18n::ui_i18n;
 
 pub fn app() -> Element {
-    let mut public_key = use_signal(|| String::from("Nincs kulcs betöltve"));
+    let mut language = use_signal(|| Language::default());
+    let i18n = ui_i18n(*language.read());
+    
+    let mut public_key = use_signal(|| String::from(i18n.no_key_loaded()));
     let mut secret_key_hidden = use_signal(|| None::<Zeroizing<String>>);
     let mut show_secret = use_signal(|| false);
-    let clipboard_status = use_signal(|| String::from("Másolás"));
+    let clipboard_status = use_signal(|| String::from(i18n.copy_label()));
     let mut input_value = use_signal(|| String::new());
     let mut generated_xdr = use_signal(|| String::new());
-    let xdr_copy_status = use_signal(|| String::from("XDR Másolása"));
-    let mut submission_status = use_signal(|| String::from("Várakozás..."));
+    let xdr_copy_status = use_signal(|| String::from(i18n.copy_xdr_label()));
+    let mut submission_status = use_signal(|| String::from(i18n.waiting()));
     let mut current_network = use_signal(|| NetworkEnvironment::Production);
 
     use_drop(move || {
@@ -28,49 +34,59 @@ pub fn app() -> Element {
     let submit_tx_action = move |_| {
         let xdr_to_submit = generated_xdr.read().clone();
         let net_env = *current_network.read();
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
 
         if xdr_to_submit.is_empty() {
-            submission_status.set("Hiba: Nincs generált XDR!".to_string());
+            submission_status.set(i18n.err_no_generated_xdr().to_string());
             return;
         }
 
         spawn(async move {
-            submission_status.set("Beküldés folyamatban...".to_string());
-            let lgr = StellarLedger::new(net_env);
+            let i18n = ui_i18n(lang);
+            submission_status.set(i18n.submitting().to_string());
+            let lgr = StellarLedger::new(net_env, lang);
 
             match lgr.submit_transaction(&xdr_to_submit).await {
-                Ok(msg) => submission_status.set(format!("✅ SIKER! {}", msg)),
-                Err(e) => submission_status.set(format!("❌ {}", e)),
+                Ok(msg) => submission_status.set(i18n.fmt_success(msg)),
+                Err(e) => submission_status.set(i18n.fmt_error(e)),
             }
         });
     };
 
     let copy_to_clipboard = move |_| {
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
         if let Some(secret) = secret_key_hidden.read().as_ref() {
-            safe_copy(secret.to_string(), clipboard_status, true);
+            safe_copy(secret.to_string(), clipboard_status, true, i18n.copied().to_string());
         }
     };
 
     let copy_xdr_to_clipboard = move |_| {
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
         let xdr = generated_xdr.read().clone();
         if !xdr.is_empty() {
-            safe_copy(xdr, xdr_copy_status, false);
+            safe_copy(xdr, xdr_copy_status, false, i18n.copied().to_string());
         }
     };
 
     let activate_account = move |_| {
         let pubkey = public_key.read().clone();
         let net_env = *current_network.read();
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
 
-        if pubkey == "Nincs kulcs betöltve" { return; }
+        if pubkey == i18n.no_key_loaded() { return; }
 
         spawn(async move {
-            submission_status.set("🚀 Faucet hívása...".to_string());
-            let lgr = StellarLedger::new(net_env);
+            let i18n = ui_i18n(lang);
+            submission_status.set(i18n.calling_faucet().to_string());
+            let lgr = StellarLedger::new(net_env, lang);
 
             match lgr.activate_test_account(&pubkey).await {
                 Ok(msg) => submission_status.set(format!("✅ {}", msg)),
-                Err(e) => submission_status.set(format!("❌ {}", e)),
+                Err(e) => submission_status.set(i18n.fmt_error(e)),
             }
         });
     };
@@ -78,31 +94,35 @@ pub fn app() -> Element {
     let fetch_and_generate = move |_| {
         let secret_str_opt = secret_key_hidden.read().clone();
         let net_env = *current_network.read();
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
 
         if secret_str_opt.is_none() {
-            submission_status.set("⚠️ Nincs betöltött kulcs!".to_string());
+            submission_status.set(i18n.no_loaded_key().to_string());
             return;
         }
 
         let secret_val = secret_str_opt.unwrap().to_string();
 
         spawn(async move {
-            submission_status.set("🔍 Szekvenciaszám lekérése...".to_string());
-            let lgr = StellarLedger::new(net_env);
+            let i18n = ui_i18n(lang);
+            submission_status.set(i18n.fetching_sequence().to_string());
+            let lgr = StellarLedger::new(net_env, lang);
             let net_info = lgr.network_info();
 
             match lgr.build_self_payment(&secret_val, 100_000_000).await {
                 Ok((xdr, seq)) => {
                     generated_xdr.set(xdr);
-                    submission_status.set(format!("✅ XDR Kész! [{}] (Seq: {})", net_info.name, seq));
+                    submission_status.set(i18n.fmt_xdr_ready(net_info.name, seq));
                 }
-                Err(e) => submission_status.set(format!("❌ {}", e)),
+                Err(e) => submission_status.set(i18n.fmt_error(e)),
             }
         });
     };
 
     let generate_key = move |_| {
-        let lgr = StellarLedger::new(*current_network.read());
+        let lang = *language.read();
+        let lgr = StellarLedger::new(*current_network.read(), lang);
         let kp = lgr.generate_keypair();
 
         public_key.set(kp.public_key);
@@ -111,7 +131,8 @@ pub fn app() -> Element {
 
     let import_key = move |_| {
         let raw_input = input_value.read().clone();
-        let lgr = StellarLedger::new(*current_network.read());
+        let lang = *language.read();
+        let lgr = StellarLedger::new(*current_network.read(), lang);
 
         if let Some(pub_key_str) = lgr.public_key_from_secret(&raw_input) {
             public_key.set(pub_key_str);
@@ -121,39 +142,45 @@ pub fn app() -> Element {
     };
 
     let save_action = move |_| {
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
         if let Some(secret) = secret_key_hidden.read().as_ref() {
-            let store = KeyringStore::new("zsozso", "default_account");
+            let store = KeyringStore::new("zsozso", "default_account", lang);
             match store.save(secret.as_str()) {
-                Ok(_) => println!("✅ Sikeres mentés a rendszer-tárcába!"),
-                Err(e) => println!("❌ {}", e),
+                Ok(_) => println!("{}", i18n.save_success()),
+                Err(e) => println!("{}", i18n.fmt_error(e)),
             }
         } else {
-            println!("⚠️ Nincs mit menteni (üres a kulcs)!");
+            println!("{}", i18n.nothing_to_save());
         }
     };
 
     let load_action = move |_| {
-        println!("🔍 Betöltés megkezdése...");
-        let store = KeyringStore::new("zsozso", "default_account");
+        let lang = *language.read();
+        let i18n = ui_i18n(lang);
+        println!("{}", i18n.loading_started());
+        let store = KeyringStore::new("zsozso", "default_account", lang);
         match store.load() {
             Ok(secret) => {
                 let secret: String = secret;  // ← típus megadása
-                println!("📥 Kulcs betöltve, hossza: {}", secret.len());
-                let lgr = StellarLedger::new(*current_network.read());
+                println!("{}", i18n.key_loaded_len(secret.len()));
+                let lgr = StellarLedger::new(*current_network.read(), lang);
 
                 if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
                     public_key.set(pub_key_str);
                     secret_key_hidden.set(Some(Zeroizing::new(secret)));
-                    println!("✨ UI sikeresen frissítve a betöltött kulccsal.");
+                    println!("{}", i18n.ui_updated_with_key());
                 }
             }
-            Err(e) => println!("❌ {}", e),
+            Err(e) => println!("{}", i18n.fmt_error(e)),
         }
     };
     
     // === Render előkészítés ===
+    let lang = *language.read();
+    let i18n = ui_i18n(lang);
     let net_env = *current_network.read();
-    let lgr_for_render = StellarLedger::new(net_env);
+    let lgr_for_render = StellarLedger::new(net_env, lang);
     let net_info = lgr_for_render.network_info();
     let is_production = net_env == NetworkEnvironment::Production;
     let has_faucet = net_info.has_faucet;
@@ -161,7 +188,7 @@ pub fn app() -> Element {
         "margin-bottom: 20px; padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: {};",
         if !is_production { "#dc3545" } else { "#17a2b8" }
     );
-    let network_btn_label = if !is_production { "🧪 Testnet ⚠️" } else { "Mainnet" };
+    let network_btn_label = if !is_production { i18n.net_testnet_label() } else { i18n.net_mainnet_label() };
 
     rsx! {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
@@ -184,21 +211,21 @@ pub fn app() -> Element {
 
             // --- CÍM MEGJELENÍTÉSE ---
             div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
-                p { style: "font-size: 0.8em; color: #666; margin: 0;", "Aktív Cím (Public Key):" }
+                p { style: "font-size: 0.8em; color: #666; margin: 0;", "{i18n.lbl_active_address()}" }
                 code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
             }
 
             // --- KULCSKEZELÉS GOMBOK ---
             div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
-                button { onclick: generate_key, "✨ Új Kulcs" }
+                button { onclick: generate_key, "{i18n.btn_new_key()}" }
                 input {
                     style: "flex-grow: 1; padding: 5px;",
                     r#type: "password",
-                    placeholder: "Importálás (S...)",
+                    placeholder: "{i18n.lbl_import_placeholder()}",
                     value: "{input_value}",
                     oninput: move |evt| input_value.set(evt.value())
                 }
-                button { onclick: import_key, "📥 Import" }
+                button { onclick: import_key, "{i18n.btn_import()}" }
             }
 
             // --- TITKOS KULCS SZEKCIÓ ---
@@ -207,7 +234,7 @@ pub fn app() -> Element {
                     div { style: "display: flex; gap: 10px; flex-wrap: wrap;",
                         button {
                             onclick: move |_| show_secret.toggle(),
-                            if *show_secret.read() { "🙈 Elrejtés" } else { "👁 Felfedés" }
+                            if *show_secret.read() { "{i18n.btn_hide_secret()}" } else { "{i18n.btn_reveal_secret()}" }
                         }
                         button {
                             style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
@@ -218,7 +245,7 @@ pub fn app() -> Element {
                             button {
                                 style: "background: #17a2b8; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
                                 onclick: activate_account,
-                                "🚀 Aktiválás (Faucet)"
+                                "{i18n.btn_activate_faucet()}"
                             }
                         }
                     }
@@ -233,15 +260,15 @@ pub fn app() -> Element {
 
             // --- MENTÉS / BETÖLTÉS ---
             div { style: "display: flex; gap: 10px; margin-top: 15px;",
-                button { onclick: save_action, style: "flex: 1;", "💾 Mentés az OS tárcába" }
-                button { onclick: load_action, style: "flex: 1;", "🔓 Betöltés" }
+                button { onclick: save_action, style: "flex: 1;", "{i18n.btn_save_to_os()}" }
+                button { onclick: load_action, style: "flex: 1;", "{i18n.btn_load()}" }
             }
 
             // --- TRANZAKCIÓ GENERÁLÁSA ---
             button {
                 style: "margin-top: 30px; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",
                 onclick: fetch_and_generate,
-                "🛠 Tranzakció XDR Generálása"
+                "{i18n.btn_generate_xdr()}"
             }
 
             // --- STÁTUSZ ÜZENET ---
@@ -253,7 +280,7 @@ pub fn app() -> Element {
             if !generated_xdr.read().is_empty() {
                 div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 1px solid #ced4da;",
                     div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
-                        span { style: "font-size: 0.8em; font-weight: bold;", "ALÁÍRT XDR:" }
+                        span { style: "font-size: 0.8em; font-weight: bold;", "{i18n.lbl_signed_xdr()}" }
                         button {
                             style: "font-size: 0.7em; padding: 4px 8px;",
                             onclick: copy_xdr_to_clipboard,
@@ -267,7 +294,7 @@ pub fn app() -> Element {
                     button {
                         style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold;",
                         onclick: submit_tx_action,
-                        "🚀 Tranzakció BEKÜLDÉSE"
+                        "{i18n.btn_submit_tx()}"
                     }
                 }
             }

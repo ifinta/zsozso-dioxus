@@ -1,9 +1,12 @@
+mod i18n;
 mod ledger;
 mod ui;
 mod store;
 
 use arboard::Clipboard;
 use dioxus::prelude::*;
+use i18n::Language;
+use ui::i18n::ui_i18n;
 
 fn main() {
     let config = dioxus::desktop::Config::new()
@@ -16,9 +19,11 @@ fn main() {
 
     LaunchBuilder::desktop().with_cfg(config).launch(ui::app);
 
+    let lang = Language::default();
+    let i18n = ui_i18n(lang);
     if let Ok(mut clipboard) = Clipboard::new() {
         let _ = clipboard.set_text("".to_string());
         std::thread::sleep(std::time::Duration::from_millis(500));
-        println!("🔐 Vágólap törölve a biztonság érdekében.");
+        println!("{}", i18n.clipboard_cleared());
     }
 }
