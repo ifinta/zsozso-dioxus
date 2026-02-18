@@ -39,7 +39,7 @@ pub trait Ledger {
     async fn activate_test_account(&self, public_key: &str) -> Result<String, String>;
 
     /// Önmagának küldő fizetési tranzakció generálása és aláírása
-    /// Visszaadja a kész, beküldésre kész XDR-t (base64)
+    /// Visszaadja a kész, beküldésre kész XDR-t (base64) és a szekvenciaszámot
     async fn build_self_payment(
         &self,
         secret_key: &str,
@@ -47,6 +47,5 @@ pub trait Ledger {
     ) -> Result<(String, i64), String>;
 
     /// Aláírt tranzakció beküldése a hálózatra
-    /// Az xdr paraméter a base64 kódolt tranzakció envelope
     async fn submit_transaction(&self, xdr: &str) -> Result<String, String>;
 }
