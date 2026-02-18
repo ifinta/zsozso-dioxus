@@ -159,7 +159,33 @@ npx serve target/dx/zsozso/release/web/public/ -l 8080
 
 The WASM web build can be deployed to iOS and Android without modifying any Rust code. Two approaches are available:
 
-### Option A: Capacitor (Native App Store Package)
+### Option A: Progressive Web App (PWA)
+
+A PWA allows users to "install" the app directly from the browser to their home screen — no app store required. It works on iOS Safari, Android Chrome, and desktop browsers.
+
+#### Setup
+
+The project includes PWA support out of the box via the following files:
+
+- **`assets/manifest.json`** — PWA manifest with app metadata, icons, and display settings
+- **`assets/sw.js`** — Service Worker for offline caching of assets
+- **`assets/pwa-install.js`** — Install prompt handling for Android Chrome
+- **`index.html`** — Includes PWA meta tags, manifest link, and service worker registration
+- **`assets/icon-192.png` and `assets/icon-512.png`** — App icons (placeholders, replace with custom designs)
+
+The web UI includes a **📲 Install** button (visible only on compatible browsers when the app can be installed) and an iOS hint for Safari users.
+
+#### How Users Install It
+
+- **Android Chrome** — Automatic "Install app" banner or click the **📲 Install** button in the app, or use Menu (⋮) → "Add to Home screen"
+- **iOS Safari** — Share (↑) → "Add to Home Screen" (iOS doesn't support automatic install prompts, but the app shows a hint)
+- **Desktop Chrome/Edge** — Address bar install icon or Menu → "Install Zsozso Wallet"
+
+#### Offline Support
+
+The service worker caches critical assets on first visit, allowing the app to work offline. When online, it automatically fetches fresh content while serving cached versions as fallback.
+
+### Option B: Capacitor (Native App Store Package)
 
 [Capacitor](https://capacitorjs.com/) wraps the web build in a native WebView, producing a real `.apk` (Android) or `.ipa` (iOS) that can be submitted to the App Store / Play Store.
 
@@ -214,100 +240,17 @@ npx cap sync
 
 > **Note:** Native device APIs (e.g. secure storage, biometrics) can be added via [Capacitor plugins](https://capacitorjs.com/docs/plugins). The browser `localStorage` store will work out of the box inside the Capacitor WebView.
 
-### Option B: Progressive Web App (PWA)
-
-A PWA allows users to "install" the app directly from the browser to their home screen — no app store required. It works on iOS Safari, Android Chrome, and desktop browsers.
-
-#### Setup
-
-Add the following files to your web build output:
-
-**`manifest.json`** — place in the project root or `assets/` directory so it's included in the build output:
-
-```json
-{
-  "name": "Zsozso Wallet",
-  "short_name": "Zsozso",
-  "description": "Stellar wallet for the Iceberg Protocol ecosystem",
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#17a2b8",
-  "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
-```
-
-**`sw.js`** — a minimal service worker for offline caching:
-
-```javascript
-const CACHE_NAME = 'zsozso-v1';
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      cache.addAll([
-        '/',
-        '/index.html',
-        '/assets/dioxus/zsozso.js',
-        '/assets/dioxus/zsozso_bg.wasm',
-      ])
-    )
-  );
-});
-
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
-  );
-});
-```
-
-Add these lines to the `<head>` section of your `index.html`:
-
-```html
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#17a2b8">
-```
-
-And register the service worker at the end of `<body>`:
-
-```html
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-  }
-</script>
-```
-
-#### How Users Install It
-
-- **Android Chrome** — Menu (⋮) → "Add to Home screen" or "Install app"
-- **iOS Safari** — Share (↑) → "Add to Home Screen"
-- **Desktop Chrome/Edge** — Address bar install icon or Menu → "Install Zsozso Wallet"
-
 ### Comparison
 
-| | Capacitor | PWA |
+| | PWA | Capacitor |
 |---|---|---|
-| **App Store / Play Store** | ✅ Yes | ❌ No |
-| **Offline support** | ✅ Built-in (bundled) | ✅ Via service worker |
-| **Native device APIs** | ✅ Via plugins | ⚠️ Limited (Web APIs only) |
-| **Installation** | Download from store | "Add to Home Screen" from browser |
-| **Update mechanism** | Store update | Automatic (on next visit) |
-| **Build complexity** | Moderate (needs Android Studio / Xcode) | Very low (just static files) |
-| **Rust code changes** | None | None |
+| **App Store / Play Store** | ❌ Not needed | ✅ Yes |
+| **Offline support** | ✅ Service worker | ✅ Built-in |
+| **Native APIs** | ⚠️ Limited | ✅ Plugins |
+| **Installation** | "Add to Home Screen" | Download from store |
+| **Updates** | Automatic | Store update |
+| **Build complexity** | Very low | Moderate |
+| **Rust code changes** | Not needed | Not needed |
 
 ## Related Repositories
 
