@@ -189,6 +189,7 @@ pub fn app() -> Element {
         if !is_production { "#dc3545" } else { "#17a2b8" }
     );
     let network_btn_label = if !is_production { i18n.net_testnet_label() } else { i18n.net_mainnet_label() };
+    let language_btn_style = "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #17a2b8;";
 
     rsx! {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
@@ -213,7 +214,7 @@ pub fn app() -> Element {
                 
                 // Nyelv váltó gomb
                 button {
-                    style: "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #17a2b8;",
+                    style: "{language_btn_style}",
                     onclick: move |_| {
                         let current_lang = *language.read();
                         let next_lang = if current_lang == Language::English {
