@@ -1,14 +1,13 @@
 use dioxus::prelude::*;
 
-/// Szöveg másolása a vágólapra, időzített visszaállítással.
-/// Ha `is_secret` true, 30 mp után törli a vágólapot; egyébként 10 mp után visszaállítja a feliratot.
-pub fn safe_copy(text: String, mut status_signal: Signal<String>, is_secret: bool, copied_label: String) {
+/// Copy text to clipboard with timed reset.
+/// If `is_secret` is true, clears the clipboard after 30s; otherwise resets the indicator after 10s.
+pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool) {
     spawn(async move {
         if let Ok(mut cb) = arboard::Clipboard::new() {
             let _ = cb.set_text(text);
 
-            let original_label = status_signal.peek().clone();
-            status_signal.set(copied_label);
+            copied_signal.set(true);
 
             let wait_secs = if is_secret { 30 } else { 10 };
             tokio::time::sleep(std::time::Duration::from_secs(wait_secs)).await;
@@ -18,7 +17,7 @@ pub fn safe_copy(text: String, mut status_signal: Signal<String>, is_secret: boo
                 std::thread::sleep(std::time::Duration::from_millis(500));
             }
 
-            status_signal.set(original_label);
+            copied_signal.set(false);
         }
     });
 }

@@ -3,12 +3,12 @@ pub mod i18n;
 
 pub use self::keyring::KeyringStore;
 
-/// Titkos kulcs biztonságos tárolásának absztrakt interfésze.
-/// A UI ezt a trait-et használja — nem tud róla, hogy keyring, fájl, vagy böngésző localStorage van mögötte.
+/// Abstract interface for secure secret key storage.
+/// The UI uses this trait — it doesn't know whether keyring, file, or browser localStorage is behind it.
 pub trait Store {
-    /// Titok mentése a biztonságos tárolóba.
+    /// Save a secret to the secure store.
     fn save(&self, secret: &str) -> Result<(), String>;
 
-    /// Titok betöltése a biztonságos tárolóból.
+    /// Load a secret from the secure store.
     fn load(&self) -> Result<String, String>;
 }

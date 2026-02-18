@@ -120,7 +120,7 @@ impl Ledger for StellarLedger {
         let net = stellar_network(self.network);
         let i18n = ledger_i18n(self.language);
 
-        // 1. Kulcs dekódolás
+        // 1. Decode key
         let priv_key = match Strkey::from_string(secret_key) {
             Ok(Strkey::PrivateKeyEd25519(pk)) => pk,
             _ => return Err(i18n.invalid_secret_key().to_string()),
@@ -130,7 +130,7 @@ impl Ledger for StellarLedger {
         let pub_bytes = signing_key.verifying_key().to_bytes();
         let public_key_str = Strkey::PublicKeyEd25519(ed25519::PublicKey(pub_bytes)).to_string();
 
-        // 2. Szekvenciaszám lekérése
+        // 2. Fetch sequence number
         let url = format!("{}/accounts/{}", net.horizon_url, public_key_str);
         let client = reqwest::Client::new();
 
@@ -147,7 +147,7 @@ impl Ledger for StellarLedger {
         let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
         let next_seq = current_seq + 1;
 
-        // 3. Tranzakció összeállítása
+        // 3. Build transaction
         let current_unix_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -175,7 +175,7 @@ impl Ledger for StellarLedger {
             ext: TransactionExt::V0,
         };
 
-        // 4. Aláírás
+        // 4. Sign
         let network_id = Hash(Sha256::digest(net.passphrase.as_bytes()).into());
         let payload = TransactionSignaturePayload {
             network_id,
@@ -226,7 +226,7 @@ impl Ledger for StellarLedger {
         if status.is_success() {
             Ok(i18n.tx_accepted().to_string())
         } else {
-            println!("Horizon hiba ({}): {}", status, body);
+            println!("Horizon error ({}): {}", status, body);
             Err(i18n.error(&status.to_string()))
         }
     }

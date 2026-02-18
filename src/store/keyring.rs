@@ -3,7 +3,7 @@ use super::Store;
 use crate::i18n::Language;
 use super::i18n::{StoreI18n, store_i18n};
 
-/// Desktop platformokon a rendszer kulcstárcáját használja (GNOME Keyring, macOS Keychain, Windows Credential Manager).
+/// On desktop platforms, uses the system keychain (GNOME Keyring, macOS Keychain, Windows Credential Manager).
 pub struct KeyringStore {
     service: &'static str,
     account: &'static str,

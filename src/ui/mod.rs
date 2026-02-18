@@ -10,18 +10,31 @@ use crate::store::{Store, KeyringStore};
 use clipboard::safe_copy;
 use i18n::ui_i18n;
 
+#[derive(Clone)]
+enum TxStatus {
+    Waiting,
+    Submitting,
+    CallingFaucet,
+    FetchingSequence,
+    NoKey,
+    NoXdr,
+    XdrReady { net: String, seq: i64 },
+    Success(String),
+    Error(String),
+    FaucetSuccess(String),
+}
+
 pub fn app() -> Element {
     let mut language = use_signal(|| Language::default());
-    let i18n = ui_i18n(*language.read());
-    
-    let mut public_key = use_signal(|| String::from(i18n.no_key_loaded()));
+
+    let mut public_key = use_signal(|| None::<String>);
     let mut secret_key_hidden = use_signal(|| None::<Zeroizing<String>>);
     let mut show_secret = use_signal(|| false);
-    let clipboard_status = use_signal(|| String::from(i18n.copy_label()));
+    let clipboard_copied = use_signal(|| false);
     let mut input_value = use_signal(|| String::new());
     let mut generated_xdr = use_signal(|| String::new());
-    let xdr_copy_status = use_signal(|| String::from(i18n.copy_xdr_label()));
-    let mut submission_status = use_signal(|| String::from(i18n.waiting()));
+    let xdr_copied = use_signal(|| false);
+    let mut submission_status = use_signal(|| TxStatus::Waiting);
     let mut current_network = use_signal(|| NetworkEnvironment::Production);
 
     use_drop(move || {
@@ -37,56 +50,48 @@ pub fn app() -> Element {
         let lang = *language.read();
 
         if xdr_to_submit.is_empty() {
-            let i18n = ui_i18n(lang);
-            submission_status.set(i18n.err_no_generated_xdr().to_string());
+            submission_status.set(TxStatus::NoXdr);
             return;
         }
 
         spawn(async move {
-            let i18n = ui_i18n(lang);
-            submission_status.set(i18n.submitting().to_string());
+            submission_status.set(TxStatus::Submitting);
             let lgr = StellarLedger::new(net_env, lang);
 
             match lgr.submit_transaction(&xdr_to_submit).await {
-                Ok(msg) => submission_status.set(i18n.fmt_success(&msg)),
-                Err(e) => submission_status.set(i18n.fmt_error(&e)),
+                Ok(msg) => submission_status.set(TxStatus::Success(msg)),
+                Err(e) => submission_status.set(TxStatus::Error(e)),
             }
         });
     };
 
     let copy_to_clipboard = move |_| {
-        let lang = *language.read();
-        let i18n = ui_i18n(lang);
         if let Some(secret) = secret_key_hidden.read().as_ref() {
-            safe_copy(secret.to_string(), clipboard_status, true, i18n.copied().to_string());
+            safe_copy(secret.to_string(), clipboard_copied, true);
         }
     };
 
     let copy_xdr_to_clipboard = move |_| {
-        let lang = *language.read();
-        let i18n = ui_i18n(lang);
         let xdr = generated_xdr.read().clone();
         if !xdr.is_empty() {
-            safe_copy(xdr, xdr_copy_status, false, i18n.copied().to_string());
+            safe_copy(xdr, xdr_copied, false);
         }
     };
 
     let activate_account = move |_| {
-        let pubkey = public_key.read().clone();
+        let pubkey_opt = public_key.read().clone();
         let net_env = *current_network.read();
         let lang = *language.read();
 
-        let i18n = ui_i18n(lang);
-        if pubkey == i18n.no_key_loaded() { return; }
+        let Some(pubkey) = pubkey_opt else { return; };
 
         spawn(async move {
-            let i18n = ui_i18n(lang);
-            submission_status.set(i18n.calling_faucet().to_string());
+            submission_status.set(TxStatus::CallingFaucet);
             let lgr = StellarLedger::new(net_env, lang);
 
             match lgr.activate_test_account(&pubkey).await {
-                Ok(msg) => submission_status.set(format!("✅ {}", msg)),
-                Err(e) => submission_status.set(i18n.fmt_error(&e)),
+                Ok(msg) => submission_status.set(TxStatus::FaucetSuccess(msg)),
+                Err(e) => submission_status.set(TxStatus::Error(e)),
             }
         });
     };
@@ -96,26 +101,24 @@ pub fn app() -> Element {
         let net_env = *current_network.read();
         let lang = *language.read();
 
-        let i18n = ui_i18n(lang);
         if secret_str_opt.is_none() {
-            submission_status.set(i18n.no_loaded_key().to_string());
+            submission_status.set(TxStatus::NoKey);
             return;
         }
 
         let secret_val = secret_str_opt.unwrap().to_string();
 
         spawn(async move {
-            let i18n = ui_i18n(lang);
-            submission_status.set(i18n.fetching_sequence().to_string());
+            submission_status.set(TxStatus::FetchingSequence);
             let lgr = StellarLedger::new(net_env, lang);
             let net_info = lgr.network_info();
 
             match lgr.build_self_payment(&secret_val, 100_000_000).await {
                 Ok((xdr, seq)) => {
                     generated_xdr.set(xdr);
-                    submission_status.set(i18n.fmt_xdr_ready(net_info.name, seq));
+                    submission_status.set(TxStatus::XdrReady { net: net_info.name.to_string(), seq });
                 }
-                Err(e) => submission_status.set(i18n.fmt_error(&e)),
+                Err(e) => submission_status.set(TxStatus::Error(e)),
             }
         });
     };
@@ -125,7 +128,7 @@ pub fn app() -> Element {
         let lgr = StellarLedger::new(*current_network.read(), lang);
         let kp = lgr.generate_keypair();
 
-        public_key.set(kp.public_key);
+        public_key.set(Some(kp.public_key));
         secret_key_hidden.set(Some(Zeroizing::new(kp.secret_key)));
     };
 
@@ -135,7 +138,7 @@ pub fn app() -> Element {
         let lgr = StellarLedger::new(*current_network.read(), lang);
 
         if let Some(pub_key_str) = lgr.public_key_from_secret(&raw_input) {
-            public_key.set(pub_key_str);
+            public_key.set(Some(pub_key_str));
             secret_key_hidden.set(Some(Zeroizing::new(raw_input)));
             input_value.set(String::new());
         }
@@ -167,7 +170,7 @@ pub fn app() -> Element {
                 let lgr = StellarLedger::new(*current_network.read(), lang);
 
                 if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
-                    public_key.set(pub_key_str);
+                    public_key.set(Some(pub_key_str));
                     secret_key_hidden.set(Some(Zeroizing::new(secret)));
                     println!("{}", i18n.ui_updated_with_key());
                 }
@@ -176,9 +179,28 @@ pub fn app() -> Element {
         }
     };
     
-    // === Render előkészítés ===
+    // === Render preparation ===
     let lang = *language.read();
     let i18n = ui_i18n(lang);
+
+    let status_text = match &*submission_status.read() {
+        TxStatus::Waiting => i18n.waiting().to_string(),
+        TxStatus::Submitting => i18n.submitting().to_string(),
+        TxStatus::CallingFaucet => i18n.calling_faucet().to_string(),
+        TxStatus::FetchingSequence => i18n.fetching_sequence().to_string(),
+        TxStatus::NoKey => i18n.no_loaded_key().to_string(),
+        TxStatus::NoXdr => i18n.err_no_generated_xdr().to_string(),
+        TxStatus::XdrReady { net, seq } => i18n.fmt_xdr_ready(net, *seq),
+        TxStatus::Success(msg) => i18n.fmt_success(msg),
+        TxStatus::Error(e) => i18n.fmt_error(e),
+        TxStatus::FaucetSuccess(msg) => format!("✅ {}", msg),
+    };
+
+    let pk_display = match &*public_key.read() {
+        Some(key) => key.clone(),
+        None => i18n.no_key_loaded().to_string(),
+    };
+
     let net_env = *current_network.read();
     let lgr_for_render = StellarLedger::new(net_env, lang);
     let net_info = lgr_for_render.network_info();
@@ -195,9 +217,9 @@ pub fn app() -> Element {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
             h2 { "Zsozso" }
 
-            // === HÁLÓZAT VÁLTÓ ÉS NYELV VÁLTÓ ===
+            // === NETWORK SWITCHER AND LANGUAGE SWITCHER ===
             div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
-                // Hálózat váltó gomb
+                // Network switcher button
                 button {
                     style: "{network_btn_style}",
                     onclick: move |_| {
@@ -212,7 +234,7 @@ pub fn app() -> Element {
                     "{network_btn_label}"
                 }
                 
-                // Nyelv váltó gomb
+                // Language switcher button
                 button {
                     style: "{language_btn_style}",
                     onclick: move |_| {
@@ -228,13 +250,13 @@ pub fn app() -> Element {
                 }
             }
 
-            // --- CÍM MEGJELENÍTÉSE ---
+            // --- ADDRESS DISPLAY ---
             div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
                 p { style: "font-size: 0.8em; color: #666; margin: 0;", "{i18n.lbl_active_address()}" }
-                code { style: "word-break: break-all; font-weight: bold;", "{public_key}" }
+                code { style: "word-break: break-all; font-weight: bold;", "{pk_display}" }
             }
 
-            // --- KULCSKEZELÉS GOMBOK ---
+            // --- KEY MANAGEMENT BUTTONS ---
             div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
                 button { onclick: generate_key, "{i18n.btn_new_key()}" }
                 input {
@@ -247,7 +269,7 @@ pub fn app() -> Element {
                 button { onclick: import_key, "{i18n.btn_import()}" }
             }
 
-            // --- TITKOS KULCS SZEKCIÓ ---
+            // --- SECRET KEY SECTION ---
             if let Some(secret) = secret_key_hidden.read().as_ref() {
                 div { style: "border: 1px solid #ffeeba; background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;",
                     div { style: "display: flex; gap: 10px; flex-wrap: wrap;",
@@ -258,7 +280,7 @@ pub fn app() -> Element {
                         button {
                             style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
                             onclick: copy_to_clipboard,
-                            "{clipboard_status}"
+                            if *clipboard_copied.read() { "{i18n.copied()}" } else { "{i18n.copy_label()}" }
                         }
                         if has_faucet {
                             button {
@@ -277,25 +299,25 @@ pub fn app() -> Element {
                 }
             }
 
-            // --- MENTÉS / BETÖLTÉS ---
+            // --- SAVE / LOAD ---
             div { style: "display: flex; gap: 10px; margin-top: 15px;",
                 button { onclick: save_action, style: "flex: 1;", "{i18n.btn_save_to_os()}" }
                 button { onclick: load_action, style: "flex: 1;", "{i18n.btn_load()}" }
             }
 
-            // --- TRANZAKCIÓ GENERÁLÁSA ---
+            // --- GENERATE TRANSACTION ---
             button {
                 style: "margin-top: 30px; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",
                 onclick: fetch_and_generate,
                 "{i18n.btn_generate_xdr()}"
             }
 
-            // --- STÁTUSZ ÜZENET ---
+            // --- STATUS MESSAGE ---
             p { style: "text-align: center; font-size: 0.9em; color: #495057; font-style: italic;",
-                "{submission_status}"
+                "{status_text}"
             }
 
-            // --- GENERÁLT XDR BLOKK ---
+            // --- GENERATED XDR BLOCK ---
             if !generated_xdr.read().is_empty() {
                 div { style: "margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 1px solid #ced4da;",
                     div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
@@ -303,7 +325,7 @@ pub fn app() -> Element {
                         button {
                             style: "font-size: 0.7em; padding: 4px 8px;",
                             onclick: copy_xdr_to_clipboard,
-                            "{xdr_copy_status}"
+                            if *xdr_copied.read() { "{i18n.copied()}" } else { "{i18n.copy_xdr_label()}" }
                         }
                     }
                     pre {
