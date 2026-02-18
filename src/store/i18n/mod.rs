@@ -7,9 +7,9 @@ use hungarian::HungarianStore;
 
 /// Trait for store-related internationalized strings
 pub trait StoreI18n {
-    fn storage_error(&self, error: impl std::fmt::Display) -> String;
-    fn save_error(&self, error: impl std::fmt::Display) -> String;
-    fn load_error(&self, error: impl std::fmt::Display) -> String;
+    fn storage_error(&self, error: &str) -> String;
+    fn save_error(&self, error: &str) -> String;
+    fn load_error(&self, error: &str) -> String;
 }
 
 /// Factory function to get the appropriate StoreI18n implementation

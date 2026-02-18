@@ -104,10 +104,10 @@ impl Ledger for StellarLedger {
                 Ok(i18n.account_activated().to_string())
             }
             Ok(resp) => {
-                Err(i18n.faucet_error(resp.status()))
+                Err(i18n.faucet_error(&resp.status().to_string()))
             }
             Err(e) => {
-                Err(i18n.network_error(e))
+                Err(i18n.network_error(&e.to_string()))
             }
         }
     }
@@ -135,14 +135,14 @@ impl Ledger for StellarLedger {
         let client = reqwest::Client::new();
 
         let response = client.get(url).send().await
-            .map_err(|e| i18n.horizon_unreachable(e))?;
+            .map_err(|e| i18n.horizon_unreachable(&e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(i18n.account_not_found().to_string());
         }
 
         let account_data: HorizonAccount = response.json().await
-            .map_err(|e| i18n.json_error(e))?;
+            .map_err(|e| i18n.json_error(&e.to_string()))?;
 
         let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
         let next_seq = current_seq + 1;
@@ -183,7 +183,7 @@ impl Ledger for StellarLedger {
         };
 
         let tx_payload_xdr = payload.to_xdr(Limits::none())
-            .map_err(|e| i18n.xdr_serial_error(e))?;
+            .map_err(|e| i18n.xdr_serial_error(&e.to_string()))?;
         let tx_hash = Sha256::digest(&tx_payload_xdr);
         let sig_bytes = signing_key.sign(&tx_hash).to_bytes();
 
@@ -201,7 +201,7 @@ impl Ledger for StellarLedger {
         });
 
         let xdr = envelope.to_xdr_base64(Limits::none())
-            .map_err(|e| i18n.xdr_error(e))?;
+            .map_err(|e| i18n.xdr_error(&e.to_string()))?;
 
         Ok((xdr, next_seq))
     }
@@ -218,7 +218,7 @@ impl Ledger for StellarLedger {
             .form(&params)
             .send()
             .await
-            .map_err(|e| i18n.network_error(e))?;
+            .map_err(|e| i18n.network_error(&e.to_string()))?;
 
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
@@ -227,7 +227,7 @@ impl Ledger for StellarLedger {
             Ok(i18n.tx_accepted().to_string())
         } else {
             println!("Horizon hiba ({}): {}", status, body);
-            Err(i18n.error(status))
+            Err(i18n.error(&status.to_string()))
         }
     }
 }

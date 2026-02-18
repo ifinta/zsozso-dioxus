@@ -48,8 +48,8 @@ pub fn app() -> Element {
             let lgr = StellarLedger::new(net_env, lang);
 
             match lgr.submit_transaction(&xdr_to_submit).await {
-                Ok(msg) => submission_status.set(i18n.fmt_success(msg)),
-                Err(e) => submission_status.set(i18n.fmt_error(e)),
+                Ok(msg) => submission_status.set(i18n.fmt_success(&msg)),
+                Err(e) => submission_status.set(i18n.fmt_error(&e)),
             }
         });
     };
@@ -86,7 +86,7 @@ pub fn app() -> Element {
 
             match lgr.activate_test_account(&pubkey).await {
                 Ok(msg) => submission_status.set(format!("✅ {}", msg)),
-                Err(e) => submission_status.set(i18n.fmt_error(e)),
+                Err(e) => submission_status.set(i18n.fmt_error(&e)),
             }
         });
     };
@@ -115,7 +115,7 @@ pub fn app() -> Element {
                     generated_xdr.set(xdr);
                     submission_status.set(i18n.fmt_xdr_ready(net_info.name, seq));
                 }
-                Err(e) => submission_status.set(i18n.fmt_error(e)),
+                Err(e) => submission_status.set(i18n.fmt_error(&e)),
             }
         });
     };
@@ -148,7 +148,7 @@ pub fn app() -> Element {
             let store = KeyringStore::new("zsozso", "default_account", lang);
             match store.save(secret.as_str()) {
                 Ok(_) => println!("{}", i18n.save_success()),
-                Err(e) => println!("{}", i18n.fmt_error(e)),
+                Err(e) => println!("{}", i18n.fmt_error(&e)),
             }
         } else {
             println!("{}", i18n.nothing_to_save());
@@ -172,7 +172,7 @@ pub fn app() -> Element {
                     println!("{}", i18n.ui_updated_with_key());
                 }
             }
-            Err(e) => println!("{}", i18n.fmt_error(e)),
+            Err(e) => println!("{}", i18n.fmt_error(&e)),
         }
     };
     

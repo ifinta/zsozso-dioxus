@@ -29,8 +29,8 @@ pub trait UiI18n {
     fn ui_updated_with_key(&self) -> &'static str;
     
     // Format helpers
-    fn fmt_success(&self, msg: impl std::fmt::Display) -> String;
-    fn fmt_error(&self, e: impl std::fmt::Display) -> String;
+    fn fmt_success(&self, msg: &str) -> String;
+    fn fmt_error(&self, e: &str) -> String;
     fn fmt_xdr_ready(&self, net: &str, seq: i64) -> String;
     
     // Button labels

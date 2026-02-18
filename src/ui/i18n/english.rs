@@ -67,11 +67,11 @@ impl UiI18n for EnglishUi {
     }
     
     // Format helpers
-    fn fmt_success(&self, msg: impl std::fmt::Display) -> String {
+    fn fmt_success(&self, msg: &str) -> String {
         format!("✅ SUCCESS! {}", msg)
     }
 
-    fn fmt_error(&self, e: impl std::fmt::Display) -> String {
+    fn fmt_error(&self, e: &str) -> String {
         format!("❌ {}", e)
     }
 
