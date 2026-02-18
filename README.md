@@ -134,10 +134,10 @@ cargo build --release
 
 ```bash
 # Development server with hot-reload
-dx serve --features web
+dx serve --platform web
 
 # Release build
-dx build --release --features web
+dx build --release --platform web
 # Output in dist/
 ```
 
