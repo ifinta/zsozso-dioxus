@@ -4,31 +4,40 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# A Dioxus alapcsomag
-#dioxus = { version = "0.5", features = ["desktop", "router"] }
-#dioxus = { version = "0.5", features = ["web"] }
+# === UI Framework ===
 dioxus = { version = "0.7.3", features = ["desktop"] }
-reqwest = { version = "0.12", features = ["json"] }
+
+# === Hálózat ===
+reqwest = { version = "0.12", features = ["json"] }   # Marad 0.12 - a Dioxus-szal kompatibilis
+
+# === Sorosítás (Serialization) ===
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# === Kriptográfia ===
 sha2 = "0.10"
 base64 = "0.22"
-stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "std"] }
-stellar-strkey = "0.0.9"
 ed25519-dalek = "2.1"
+
+# === Stellar Network ===
+stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "std"] }
+stellar-strkey = "0.0.9"    # ← 2. lépésben frissítjük 0.0.16-ra (API ellenőrzés kell!)
+
+# === Biztonság ===
 rand = "0.8"
-zeroize = { version = "1.7", features = ["derive"] }
-arboard = "3.3" # Vágólap kezelő
+zeroize = { version = "1.8", features = ["derive"] }  # 1.7 → 1.8
+
+# === Platform / Desktop ===
+arboard = "3.4"             # 3.3 → 3.4 (bugfixek, Windows PNG támogatás)
 tokio = { version = "1", features = ["time", "rt-multi-thread"] }
-# keyring = "3.2" # Biztonságos tárolás az OS kulcstartójában
-keyring = { version = "3.2", features = ["sync-secret-service", "linux-native"] }
-# Opcionális: Ha később logolni akarsz (mint a console.log JS-ben)
+keyring = { version = "3.6", features = ["sync-secret-service", "linux-native"] }  # 3.2 → 3.6
+
+# === Naplózás (Logging) ===
 tracing = "0.1"
 tracing-wasm = { version = "0.2", optional = true }
 
 [profile.release]
-# Kicsi és gyors binárist csinál, kiszedi a felesleget (LTO)
-opt-level = "z"     # Méretre optimalizálás
-lto = true          # Link Time Optimization (lassú fordítás, gyors futás)
-codegen-units = 1   # Még több optimalizáció
-panic = "abort"     # Kisebb binárisméret (nincs stack unwind)
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
