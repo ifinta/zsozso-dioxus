@@ -1,27 +1,27 @@
 # Zsozso
 
-The main desktop application for the [Iceberg Protocol](https://ifinta.github.io/zsozso-webpage/) ecosystem, built with Rust and [Dioxus](https://dioxuslabs.com/).
+The main application for the [Iceberg Protocol](https://ifinta.github.io/zsozso-webpage/) ecosystem, built with Rust and [Dioxus](https://dioxuslabs.com/). Runs as a native desktop app or in the browser via WebAssembly.
 
-ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hierarchical MLM infrastructure and message-bus architecture on the [Stellar](https://stellar.org/) blockchain. This app provides a native desktop wallet for key management, transaction signing, and network interaction.
+ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hierarchical MLM infrastructure and message-bus architecture on the [Stellar](https://stellar.org/) blockchain. This app provides a wallet for key management, transaction signing, and network interaction.
 
 ## Features
 
 - **Key Management** — Generate new Stellar keypairs or import existing secret keys
-- **Secure Storage** — Secret keys are stored in the OS-level credential manager (GNOME Keyring, macOS Keychain, Windows Credential Manager)
+- **Secure Storage** — Desktop: OS credential manager (GNOME Keyring, macOS Keychain, Windows Credential Manager); Web: browser localStorage
 - **Network Switching** — Toggle between Stellar Mainnet and Testnet with a single click
 - **Language Switching** — Toggle between English and Hungarian UI at runtime
 - **Transaction Signing** — Build and sign XDR transaction envelopes locally
 - **Transaction Submission** — Submit signed transactions directly to Stellar Horizon
 - **Testnet Faucet** — Activate test accounts via Friendbot (Testnet only)
-- **Clipboard Security** — Secret keys are auto-cleared from clipboard after 30 seconds
+- **Clipboard Security** — Desktop: secret keys auto-cleared from clipboard after 30s; Web: uses navigator.clipboard API
 
 ## Architecture
 
-The application is designed with trait-based abstraction layers so that no module depends on blockchain or platform specifics directly:
+The application is designed with trait-based abstraction layers so that no module depends on blockchain or platform specifics directly. Platform differences are handled via `#[cfg]` gates and Cargo feature flags (`desktop` / `web`).
 
 ```
 src/
-├── main.rs                  # Application entry point (launches Dioxus desktop)
+├── main.rs                  # Entry point — desktop or web launch via cfg
 ├── i18n.rs                  # Language enum (English, Hungarian)
 ├── ledger/
 │   ├── mod.rs               # Ledger trait — abstract blockchain interface
@@ -32,14 +32,15 @@ src/
 │       └── hungarian.rs     # Hungarian implementation
 ├── store/
 │   ├── mod.rs               # Store trait — abstract secret storage interface
-│   ├── keyring.rs           # OS keyring implementation (GNOME/macOS/Windows)
+│   ├── keyring.rs           # Desktop: OS keyring (GNOME/macOS/Windows)
+│   ├── local_storage.rs     # Web: browser localStorage
 │   └── i18n/
 │       ├── mod.rs           # StoreI18n trait — storage error messages
 │       ├── english.rs       # English implementation
 │       └── hungarian.rs     # Hungarian implementation
 └── ui/
     ├── mod.rs               # Dioxus UI components and application logic
-    ├── clipboard.rs         # Clipboard copy with timed auto-clear
+    ├── clipboard.rs         # Clipboard copy — arboard (desktop) / navigator.clipboard (web)
     └── i18n/
         ├── mod.rs           # UiI18n trait — all UI-facing strings
         ├── english.rs       # English implementation
@@ -48,10 +49,10 @@ src/
 
 ### Core Traits
 
-| Trait | Purpose | Current Implementation |
-|-------|---------|----------------------|
-| `Ledger` | Blockchain operations (keygen, signing, submitting) | `StellarLedger` (Stellar Horizon + XDR) |
-| `Store` | Secure secret persistence | `KeyringStore` (OS credential manager) |
+| Trait | Purpose | Desktop Implementation | Web Implementation |
+|-------|---------|----------------------|-------------------|
+| `Ledger` | Blockchain operations (keygen, signing, submitting) | `StellarLedger` | `StellarLedger` (same) |
+| `Store` | Secure secret persistence | `KeyringStore` (OS credential manager) | `LocalStorageStore` (browser localStorage) |
 
 ### Internationalization (i18n) Traits
 
@@ -71,18 +72,18 @@ Every user-facing string in the application is abstracted behind i18n traits, wi
 
 ## Target Platforms
 
-| Platform | Status |
-|----------|--------|
-| Linux (Debian/Ubuntu) | ✅ Supported (current) |
-| macOS | 🔜 Planned |
-| Windows | 🔜 Planned |
-| Web (WASM) | 🔜 Planned |
-| iOS | 🔜 Planned |
-| Android | 🔜 Planned |
+| Platform | Status | Feature Flag |
+|----------|--------|-------------|
+| Linux (Debian/Ubuntu) | ✅ Supported | `desktop` (default) |
+| macOS | 🔜 Planned | `desktop` |
+| Windows | 🔜 Planned | `desktop` |
+| Web (WASM) | ✅ Supported | `web` |
+| iOS | 🔜 Planned | — |
+| Android | 🔜 Planned | — |
 
 ## Prerequisites
 
-### Linux (Debian/Ubuntu)
+### Linux (Debian/Ubuntu) — Desktop
 
 ```bash
 # Rust toolchain
@@ -98,7 +99,22 @@ sudo apt install -y \
   libssl-dev
 ```
 
+### Web (WASM)
+
+```bash
+# Rust toolchain (if not installed yet)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# WASM target
+rustup target add wasm32-unknown-unknown
+
+# Dioxus CLI (for dx serve / dx build)
+cargo install dioxus-cli
+```
+
 ## Build & Run
+
+### Desktop (default)
 
 ```bash
 # Clone the repository
@@ -113,6 +129,26 @@ cargo run
 cargo build --release
 ./target/release/zsozso
 ```
+
+### Web (WASM)
+
+```bash
+# Development server with hot-reload
+dx serve --features web
+
+# Release build
+dx build --release --features web
+# Output in dist/
+```
+
+### Feature Flags
+
+| Flag | Description |
+|------|-------------|
+| `desktop` | Native desktop app (default) — Dioxus desktop, arboard clipboard, tokio runtime, OS keyring |
+| `web` | Browser app via WASM — Dioxus web, navigator.clipboard, gloo-timers, browser localStorage |
+
+> **Note:** The `desktop` and `web` features are mutually exclusive. Use `--no-default-features --features web` if building manually with `cargo` instead of `dx`.
 
 ## Related Repositories
 

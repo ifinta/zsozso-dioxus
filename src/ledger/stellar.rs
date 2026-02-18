@@ -148,10 +148,14 @@ impl Ledger for StellarLedger {
         let next_seq = current_seq + 1;
 
         // 3. Build transaction
+        #[cfg(not(target_arch = "wasm32"))]
         let current_unix_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
+
+        #[cfg(target_arch = "wasm32")]
+        let current_unix_time = (js_sys::Date::now() / 1000.0) as u64;
 
         let tx = Transaction {
             source_account: MuxedAccount::Ed25519(Uint256(pub_bytes)),
@@ -226,7 +230,10 @@ impl Ledger for StellarLedger {
         if status.is_success() {
             Ok(i18n.tx_accepted().to_string())
         } else {
+            #[cfg(not(target_arch = "wasm32"))]
             println!("Horizon error ({}): {}", status, body);
+            #[cfg(target_arch = "wasm32")]
+            web_sys::console::log_1(&format!("Horizon error ({}): {}", status, body).into());
             Err(i18n.error(&status.to_string()))
         }
     }

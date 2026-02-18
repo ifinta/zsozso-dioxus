@@ -3,12 +3,14 @@ mod ledger;
 mod ui;
 mod store;
 
-use arboard::Clipboard;
 use dioxus::prelude::*;
-use i18n::Language;
-use ui::i18n::ui_i18n;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
+    use arboard::Clipboard;
+    use i18n::Language;
+    use ui::i18n::ui_i18n;
+
     let config = dioxus::desktop::Config::new()
         .with_window(
             dioxus::desktop::WindowBuilder::new()
@@ -26,4 +28,9 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(500));
         println!("{}", i18n.clipboard_cleared());
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    LaunchBuilder::web().launch(ui::app);
 }

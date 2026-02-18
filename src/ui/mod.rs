@@ -6,9 +6,14 @@ use zeroize::Zeroizing;
 
 use crate::i18n::Language;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
-use crate::store::{Store, KeyringStore};
+use crate::store::Store;
 use clipboard::safe_copy;
 use i18n::ui_i18n;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::store::KeyringStore;
+#[cfg(target_arch = "wasm32")]
+use crate::store::LocalStorageStore;
 
 #[derive(Clone)]
 enum TxStatus {
@@ -37,6 +42,7 @@ pub fn app() -> Element {
     let mut submission_status = use_signal(|| TxStatus::Waiting);
     let mut current_network = use_signal(|| NetworkEnvironment::Production);
 
+    #[cfg(not(target_arch = "wasm32"))]
     use_drop(move || {
         if let Ok(mut cb) = arboard::Clipboard::new() {
             let _ = cb.set_text("".to_string());
@@ -148,34 +154,34 @@ pub fn app() -> Element {
         let lang = *language.read();
         let i18n = ui_i18n(lang);
         if let Some(secret) = secret_key_hidden.read().as_ref() {
-            let store = KeyringStore::new("zsozso", "default_account", lang);
+            let store = new_store(lang);
             match store.save(secret.as_str()) {
-                Ok(_) => println!("{}", i18n.save_success()),
-                Err(e) => println!("{}", i18n.fmt_error(&e)),
+                Ok(_) => log(&i18n.save_success().to_string()),
+                Err(e) => log(&i18n.fmt_error(&e)),
             }
         } else {
-            println!("{}", i18n.nothing_to_save());
+            log(&i18n.nothing_to_save().to_string());
         }
     };
 
     let load_action = move |_| {
         let lang = *language.read();
         let i18n = ui_i18n(lang);
-        println!("{}", i18n.loading_started());
-        let store = KeyringStore::new("zsozso", "default_account", lang);
+        log(&i18n.loading_started().to_string());
+        let store = new_store(lang);
         match store.load() {
             Ok(secret) => {
                 let secret: String = secret;
-                println!("{}", i18n.key_loaded_len(secret.len()));
+                log(&i18n.key_loaded_len(secret.len()));
                 let lgr = StellarLedger::new(*current_network.read(), lang);
 
                 if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
                     public_key.set(Some(pub_key_str));
                     secret_key_hidden.set(Some(Zeroizing::new(secret)));
-                    println!("{}", i18n.ui_updated_with_key());
+                    log(&i18n.ui_updated_with_key().to_string());
                 }
             }
-            Err(e) => println!("{}", i18n.fmt_error(&e)),
+            Err(e) => log(&i18n.fmt_error(&e)),
         }
     };
     
@@ -341,4 +347,26 @@ pub fn app() -> Element {
             }
         }
     }
+}
+
+/// Create the platform-appropriate Store implementation.
+#[cfg(not(target_arch = "wasm32"))]
+fn new_store(lang: crate::i18n::Language) -> KeyringStore {
+    KeyringStore::new("zsozso", "default_account", lang)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn new_store(lang: crate::i18n::Language) -> LocalStorageStore {
+    LocalStorageStore::new("zsozso", "default_account", lang)
+}
+
+/// Cross-platform logging: println on desktop, console.log on web.
+#[cfg(not(target_arch = "wasm32"))]
+fn log(msg: &str) {
+    println!("{}", msg);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn log(msg: &str) {
+    web_sys::console::log_1(&msg.into());
 }

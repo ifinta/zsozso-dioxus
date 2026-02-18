@@ -3,18 +3,23 @@ name = "zsozso"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["desktop"]
+desktop = ["dioxus/desktop", "dep:arboard", "dep:tokio"]
+web = ["dioxus/web", "dep:web-sys", "dep:wasm-bindgen", "dep:js-sys", "dep:gloo-timers", "dep:wasm-bindgen-futures", "getrandom/wasm_js"]
+
 [dependencies]
 # === UI Framework ===
-dioxus = { version = "0.7.3", features = ["desktop"] }
+dioxus = "0.7.3"
 
-# === Hálózat ===
-reqwest = { version = "0.12", features = ["json"] }   # Marad 0.12 - a Dioxus-szal kompatibilis
+# === Network ===
+reqwest = { version = "0.12", features = ["json"] }
 
-# === Sorosítás (Serialization) ===
+# === Serialization ===
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# === Kriptográfia ===
+# === Cryptography ===
 sha2 = "0.10"
 base64 = "0.22"
 ed25519-dalek = "2.1"
@@ -23,23 +28,27 @@ ed25519-dalek = "2.1"
 stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "std"] }
 stellar-strkey = "0.0.13"
 
-# === Biztonság ===
+# === Security ===
 rand = "0.9"
-zeroize = { version = "1.8", features = ["derive"] }  # 1.7 → 1.8
+zeroize = { version = "1.8", features = ["derive"] }
+getrandom = "0.3"
 
-# === Platform / Desktop ===
-arboard = "3.4"             # 3.3 → 3.4 (bugfixek, Windows PNG támogatás)
-tokio = { version = "1", features = ["time", "rt-multi-thread"] }
+# === Logging ===
+tracing = "0.1"
+
+# === Platform / Desktop (optional) ===
+arboard = { version = "3.4", optional = true }
+tokio = { version = "1", features = ["time", "rt-multi-thread"], optional = true }
+
+# === Platform / Web (optional) ===
+web-sys = { version = "0.3", features = ["Window", "Storage", "Navigator", "Clipboard"], optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+gloo-timers = { version = "0.3", features = ["futures"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 keyring = { version = "3.6", features = ["sync-secret-service", "linux-native"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3", features = ["Window", "Storage"] }
-
-# === Naplózás (Logging) ===
-tracing = "0.1"
-tracing-wasm = { version = "0.2", optional = true }
 
 [profile.release]
 opt-level = "z"
