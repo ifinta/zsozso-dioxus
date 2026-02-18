@@ -390,8 +390,10 @@ fn render_pwa_install_button() -> Element {
                     let window = web_sys::window().unwrap();
                     if let Ok(func) = js_sys::Reflect::get(&window, &"triggerPwaInstall".into()) {
                         if let Some(f) = func.dyn_ref::<js_sys::Function>() {
-                            if let Ok(promise) = f.call0(&window).map(|v| js_sys::Promise::from(v)) {
-                                let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+                            if let Ok(result) = f.call0(&window) {
+                                if let Ok(promise) = result.dyn_into::<js_sys::Promise>() {
+                                    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+                                }
                             }
                         }
                     }
