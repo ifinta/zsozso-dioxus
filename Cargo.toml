@@ -30,7 +30,12 @@ zeroize = { version = "1.8", features = ["derive"] }  # 1.7 → 1.8
 # === Platform / Desktop ===
 arboard = "3.4"             # 3.3 → 3.4 (bugfixek, Windows PNG támogatás)
 tokio = { version = "1", features = ["time", "rt-multi-thread"] }
-keyring = { version = "3.6", features = ["sync-secret-service", "linux-native"] }  # 3.2 → 3.6
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+keyring = { version = "3.6", features = ["sync-secret-service", "linux-native"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = ["Window", "Storage"] }
 
 # === Naplózás (Logging) ===
 tracing = "0.1"
