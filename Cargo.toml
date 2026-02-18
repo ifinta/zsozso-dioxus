@@ -21,7 +21,7 @@ ed25519-dalek = "2.1"
 
 # === Stellar Network ===
 stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "std"] }
-stellar-strkey = "0.0.9"    # ← 2. lépésben frissítjük 0.0.16-ra (API ellenőrzés kell!)
+stellar-strkey = "0.0.13"
 
 # === Biztonság ===
 rand = "0.8"
