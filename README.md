@@ -138,7 +138,10 @@ dx serve --platform web
 
 # Release build
 dx build --release --platform web
-# Output in dist/
+# Output in target/dx/zsozso/release/web/public/
+
+# use i.e. npx to serve it
+npx serve target/dx/zsozso/release/web/public/ -l 8080
 ```
 
 ### Feature Flags
