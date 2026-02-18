@@ -244,13 +244,13 @@ npx cap sync
 
 | | PWA | Capacitor |
 |---|---|---|
-| **App Store / Play Store** | ❌ Nem szükséges | ✅ Igen |
-| **Offline támogatás** | ✅ Service worker | ✅ Beépített |
-| **Natív API-k** | ⚠️ Korlátozott | ✅ Pluginek |
-| **Telepítés** | "Add to Home Screen" | Store-ból letöltés |
-| **Frissítés** | Automatikus | Store update |
-| **Build komplexitás** | Nagyon alacsony | Közepes |
-| **Rust kód módosítás** | Nem szükséges | Nem szükséges |
+| **App Store / Play Store** | ❌ Not needed | ✅ Yes |
+| **Offline support** | ✅ Service worker | ✅ Built-in |
+| **Native APIs** | ⚠️ Limited | ✅ Plugins |
+| **Installation** | "Add to Home Screen" | Download from store |
+| **Updates** | Automatic | Store update |
+| **Build complexity** | Very low | Moderate |
+| **Rust code changes** | Not needed | Not needed |
 
 ## Related Repositories
 
