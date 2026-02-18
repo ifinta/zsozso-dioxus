@@ -162,7 +162,7 @@ pub fn app() -> Element {
         let store = KeyringStore::new("zsozso", "default_account", lang);
         match store.load() {
             Ok(secret) => {
-                let secret: String = secret;  // ← típus megadása
+                let secret: String = secret;
                 println!("{}", i18n.key_loaded_len(secret.len()));
                 let lgr = StellarLedger::new(*current_network.read(), lang);
 
