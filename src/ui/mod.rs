@@ -35,9 +35,9 @@ pub fn app() -> Element {
         let xdr_to_submit = generated_xdr.read().clone();
         let net_env = *current_network.read();
         let lang = *language.read();
-        let i18n = ui_i18n(lang);
 
         if xdr_to_submit.is_empty() {
+            let i18n = ui_i18n(lang);
             submission_status.set(i18n.err_no_generated_xdr().to_string());
             return;
         }
@@ -75,8 +75,8 @@ pub fn app() -> Element {
         let pubkey = public_key.read().clone();
         let net_env = *current_network.read();
         let lang = *language.read();
-        let i18n = ui_i18n(lang);
 
+        let i18n = ui_i18n(lang);
         if pubkey == i18n.no_key_loaded() { return; }
 
         spawn(async move {
@@ -95,8 +95,8 @@ pub fn app() -> Element {
         let secret_str_opt = secret_key_hidden.read().clone();
         let net_env = *current_network.read();
         let lang = *language.read();
-        let i18n = ui_i18n(lang);
 
+        let i18n = ui_i18n(lang);
         if secret_str_opt.is_none() {
             submission_status.set(i18n.no_loaded_key().to_string());
             return;
