@@ -24,7 +24,7 @@ stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "std"] }
 stellar-strkey = "0.0.13"
 
 # === Biztonság ===
-rand = "0.8"
+rand = "0.9"
 zeroize = { version = "1.8", features = ["derive"] }  # 1.7 → 1.8
 
 # === Platform / Desktop ===
