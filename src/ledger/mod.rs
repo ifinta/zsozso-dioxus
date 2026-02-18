@@ -1,4 +1,5 @@
 mod stellar;
+pub mod i18n;
 
 pub use stellar::StellarLedger;
 

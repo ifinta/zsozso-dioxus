@@ -14,6 +14,8 @@ use sha2::{Sha256, Digest};
 use serde::Deserialize;
 
 use super::{KeyPair, Ledger, NetworkEnvironment, NetworkInfo};
+use crate::i18n::Language;
+use super::i18n::{LedgerI18n, ledger_i18n};
 
 struct StellarNetworkConfig {
     name: &'static str,
@@ -46,11 +48,12 @@ struct HorizonAccount {
 
 pub struct StellarLedger {
     network: NetworkEnvironment,
+    language: Language,
 }
 
 impl StellarLedger {
-    pub fn new(network: NetworkEnvironment) -> Self {
-        Self { network }
+    pub fn new(network: NetworkEnvironment, language: Language) -> Self {
+        Self { network, language }
     }
 }
 
@@ -90,20 +93,21 @@ impl Ledger for StellarLedger {
 
     async fn activate_test_account(&self, public_key: &str) -> Result<String, String> {
         let net = stellar_network(self.network);
+        let i18n = ledger_i18n(self.language);
         let friendbot_base = net.friendbot_url
-            .ok_or_else(|| "Faucet nem elérhető ezen a hálózaton.".to_string())?;
+            .ok_or_else(|| i18n.faucet_unavailable().to_string())?;
 
         let url = format!("{}/?addr={}", friendbot_base, public_key);
 
         match reqwest::get(url).await {
             Ok(resp) if resp.status().is_success() => {
-                Ok("Fiók aktiválva!".to_string())
+                Ok(i18n.account_activated().to_string())
             }
             Ok(resp) => {
-                Err(format!("Faucet hiba: {}", resp.status()))
+                Err(i18n.faucet_error(resp.status()))
             }
             Err(e) => {
-                Err(format!("Hálózati hiba: {}", e))
+                Err(i18n.network_error(e))
             }
         }
     }
@@ -114,11 +118,12 @@ impl Ledger for StellarLedger {
         amount: i64,
     ) -> Result<(String, i64), String> {
         let net = stellar_network(self.network);
+        let i18n = ledger_i18n(self.language);
 
         // 1. Kulcs dekódolás
         let priv_key = match Strkey::from_string(secret_key) {
             Ok(Strkey::PrivateKeyEd25519(pk)) => pk,
-            _ => return Err("Érvénytelen titkos kulcs.".to_string()),
+            _ => return Err(i18n.invalid_secret_key().to_string()),
         };
 
         let signing_key = SigningKey::from_bytes(&priv_key.0);
@@ -130,14 +135,14 @@ impl Ledger for StellarLedger {
         let client = reqwest::Client::new();
 
         let response = client.get(url).send().await
-            .map_err(|e| format!("Horizon nem elérhető: {}", e))?;
+            .map_err(|e| i18n.horizon_unreachable(e))?;
 
         if !response.status().is_success() {
-            return Err("Fiók nem található! Előbb aktiváld!".to_string());
+            return Err(i18n.account_not_found().to_string());
         }
 
         let account_data: HorizonAccount = response.json().await
-            .map_err(|e| format!("JSON hiba: {}", e))?;
+            .map_err(|e| i18n.json_error(e))?;
 
         let current_seq: i64 = account_data.sequence.parse().unwrap_or(0);
         let next_seq = current_seq + 1;
@@ -178,7 +183,7 @@ impl Ledger for StellarLedger {
         };
 
         let tx_payload_xdr = payload.to_xdr(Limits::none())
-            .map_err(|e| format!("XDR szerializálási hiba: {:?}", e))?;
+            .map_err(|e| i18n.xdr_serial_error(e))?;
         let tx_hash = Sha256::digest(&tx_payload_xdr);
         let sig_bytes = signing_key.sign(&tx_hash).to_bytes();
 
@@ -196,13 +201,14 @@ impl Ledger for StellarLedger {
         });
 
         let xdr = envelope.to_xdr_base64(Limits::none())
-            .map_err(|e| format!("XDR hiba: {:?}", e))?;
+            .map_err(|e| i18n.xdr_error(e))?;
 
         Ok((xdr, next_seq))
     }
 
     async fn submit_transaction(&self, xdr: &str) -> Result<String, String> {
         let net = stellar_network(self.network);
+        let i18n = ledger_i18n(self.language);
         let url = format!("{}/transactions", net.horizon_url);
         let client = reqwest::Client::new();
         let params = [("tx", xdr)];
@@ -212,16 +218,16 @@ impl Ledger for StellarLedger {
             .form(&params)
             .send()
             .await
-            .map_err(|e| format!("Hálózati hiba: {}", e))?;
+            .map_err(|e| i18n.network_error(e))?;
 
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
 
         if status.is_success() {
-            Ok("Tranzakció elfogadva.".to_string())
+            Ok(i18n.tx_accepted().to_string())
         } else {
             println!("Horizon hiba ({}): {}", status, body);
-            Err(format!("Hiba: {}", status))
+            Err(i18n.error(status))
         }
     }
 }

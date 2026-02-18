@@ -1,4 +1,5 @@
 mod keyring;
+pub mod i18n;
 
 pub use self::keyring::KeyringStore;
 
