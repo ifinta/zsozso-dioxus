@@ -185,28 +185,47 @@ pub fn app() -> Element {
     let is_production = net_env == NetworkEnvironment::Production;
     let has_faucet = net_info.has_faucet;
     let network_btn_style = format!(
-        "margin-bottom: 20px; padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: {};",
+        "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: {};",
         if !is_production { "#dc3545" } else { "#17a2b8" }
     );
     let network_btn_label = if !is_production { i18n.net_testnet_label() } else { i18n.net_mainnet_label() };
+    let language_btn_style = "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #17a2b8;";
 
     rsx! {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
             h2 { "Zsozso" }
 
-            // === HÁLÓZAT VÁLTÓ ===
-            button {
-                style: "{network_btn_style}",
-                onclick: move |_| {
-                    let next = if *current_network.read() == NetworkEnvironment::Production {
-                        NetworkEnvironment::Test
-                    } else {
-                        NetworkEnvironment::Production
-                    };
-                    current_network.set(next);
-                    generated_xdr.set(String::new());
-                },
-                "{network_btn_label}"
+            // === HÁLÓZAT VÁLTÓ ÉS NYELV VÁLTÓ ===
+            div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
+                // Hálózat váltó gomb
+                button {
+                    style: "{network_btn_style}",
+                    onclick: move |_| {
+                        let next = if *current_network.read() == NetworkEnvironment::Production {
+                            NetworkEnvironment::Test
+                        } else {
+                            NetworkEnvironment::Production
+                        };
+                        current_network.set(next);
+                        generated_xdr.set(String::new());
+                    },
+                    "{network_btn_label}"
+                }
+                
+                // Nyelv váltó gomb
+                button {
+                    style: "{language_btn_style}",
+                    onclick: move |_| {
+                        let current_lang = *language.read();
+                        let next_lang = if current_lang == Language::English {
+                            Language::Hungarian
+                        } else {
+                            Language::English
+                        };
+                        language.set(next_lang);
+                    },
+                    if *language.read() == Language::English { "Magyar" } else { "English" }
+                }
             }
 
             // --- CÍM MEGJELENÍTÉSE ---
