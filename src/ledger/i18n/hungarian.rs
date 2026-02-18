@@ -11,11 +11,11 @@ impl LedgerI18n for HungarianLedger {
         "Fiók aktiválva!"
     }
 
-    fn faucet_error(&self, status: impl std::fmt::Display) -> String {
+    fn faucet_error(&self, status: &str) -> String {
         format!("Faucet hiba: {}", status)
     }
 
-    fn network_error(&self, error: impl std::fmt::Display) -> String {
+    fn network_error(&self, error: &str) -> String {
         format!("Hálózati hiba: {}", error)
     }
 
@@ -23,7 +23,7 @@ impl LedgerI18n for HungarianLedger {
         "Érvénytelen titkos kulcs."
     }
 
-    fn horizon_unreachable(&self, error: impl std::fmt::Display) -> String {
+    fn horizon_unreachable(&self, error: &str) -> String {
         format!("Horizon nem elérhető: {}", error)
     }
 
@@ -31,15 +31,15 @@ impl LedgerI18n for HungarianLedger {
         "Fiók nem található! Előbb aktiváld!"
     }
 
-    fn json_error(&self, error: impl std::fmt::Display) -> String {
+    fn json_error(&self, error: &str) -> String {
         format!("JSON hiba: {}", error)
     }
 
-    fn xdr_serial_error(&self, error: impl std::fmt::Display) -> String {
+    fn xdr_serial_error(&self, error: &str) -> String {
         format!("XDR szerializálási hiba: {:?}", error)
     }
 
-    fn xdr_error(&self, error: impl std::fmt::Display) -> String {
+    fn xdr_error(&self, error: &str) -> String {
         format!("XDR hiba: {:?}", error)
     }
 
@@ -47,7 +47,7 @@ impl LedgerI18n for HungarianLedger {
         "Tranzakció elfogadva."
     }
 
-    fn error(&self, status: impl std::fmt::Display) -> String {
+    fn error(&self, status: &str) -> String {
         format!("Hiba: {}", status)
     }
 }

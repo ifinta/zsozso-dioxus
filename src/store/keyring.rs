@@ -20,17 +20,17 @@ impl Store for KeyringStore {
     fn save(&self, secret: &str) -> Result<(), String> {
         let i18n = store_i18n(self.language);
         let entry = Entry::new(self.service, self.account)
-            .map_err(|e| i18n.storage_error(e))?;
+            .map_err(|e| i18n.storage_error(&e.to_string()))?;
         let _ = entry.delete_credential();
         entry.set_password(secret)
-            .map_err(|e| i18n.save_error(e))
+            .map_err(|e| i18n.save_error(&e.to_string()))
     }
 
     fn load(&self) -> Result<String, String> {
         let i18n = store_i18n(self.language);
         let entry = Entry::new(self.service, self.account)
-            .map_err(|e| i18n.storage_error(e))?;
+            .map_err(|e| i18n.storage_error(&e.to_string()))?;
         entry.get_password()
-            .map_err(|e| i18n.load_error(e))
+            .map_err(|e| i18n.load_error(&e.to_string()))
     }
 }

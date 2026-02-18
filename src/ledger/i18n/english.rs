@@ -11,11 +11,11 @@ impl LedgerI18n for EnglishLedger {
         "Account activated!"
     }
 
-    fn faucet_error(&self, status: impl std::fmt::Display) -> String {
+    fn faucet_error(&self, status: &str) -> String {
         format!("Faucet error: {}", status)
     }
 
-    fn network_error(&self, error: impl std::fmt::Display) -> String {
+    fn network_error(&self, error: &str) -> String {
         format!("Network error: {}", error)
     }
 
@@ -23,7 +23,7 @@ impl LedgerI18n for EnglishLedger {
         "Invalid secret key."
     }
 
-    fn horizon_unreachable(&self, error: impl std::fmt::Display) -> String {
+    fn horizon_unreachable(&self, error: &str) -> String {
         format!("Horizon unreachable: {}", error)
     }
 
@@ -31,15 +31,15 @@ impl LedgerI18n for EnglishLedger {
         "Account not found! Activate it first!"
     }
 
-    fn json_error(&self, error: impl std::fmt::Display) -> String {
+    fn json_error(&self, error: &str) -> String {
         format!("JSON error: {}", error)
     }
 
-    fn xdr_serial_error(&self, error: impl std::fmt::Display) -> String {
+    fn xdr_serial_error(&self, error: &str) -> String {
         format!("XDR serialization error: {:?}", error)
     }
 
-    fn xdr_error(&self, error: impl std::fmt::Display) -> String {
+    fn xdr_error(&self, error: &str) -> String {
         format!("XDR error: {:?}", error)
     }
 
@@ -47,7 +47,7 @@ impl LedgerI18n for EnglishLedger {
         "Transaction accepted."
     }
 
-    fn error(&self, status: impl std::fmt::Display) -> String {
+    fn error(&self, status: &str) -> String {
         format!("Error: {}", status)
     }
 }

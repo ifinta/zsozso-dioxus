@@ -9,16 +9,16 @@ use hungarian::HungarianLedger;
 pub trait LedgerI18n {
     fn faucet_unavailable(&self) -> &'static str;
     fn account_activated(&self) -> &'static str;
-    fn faucet_error(&self, status: impl std::fmt::Display) -> String;
-    fn network_error(&self, error: impl std::fmt::Display) -> String;
+    fn faucet_error(&self, status: &str) -> String;
+    fn network_error(&self, error: &str) -> String;
     fn invalid_secret_key(&self) -> &'static str;
-    fn horizon_unreachable(&self, error: impl std::fmt::Display) -> String;
+    fn horizon_unreachable(&self, error: &str) -> String;
     fn account_not_found(&self) -> &'static str;
-    fn json_error(&self, error: impl std::fmt::Display) -> String;
-    fn xdr_serial_error(&self, error: impl std::fmt::Display) -> String;
-    fn xdr_error(&self, error: impl std::fmt::Display) -> String;
+    fn json_error(&self, error: &str) -> String;
+    fn xdr_serial_error(&self, error: &str) -> String;
+    fn xdr_error(&self, error: &str) -> String;
     fn tx_accepted(&self) -> &'static str;
-    fn error(&self, status: impl std::fmt::Display) -> String;
+    fn error(&self, status: &str) -> String;
 }
 
 /// Factory function to get the appropriate LedgerI18n implementation
