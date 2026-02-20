@@ -173,12 +173,10 @@ The project includes PWA support out of the box via the following files:
 - **`index.html`** — Includes PWA meta tags, manifest link, and service worker registration
 - **`assets/icon-192.png` and `assets/icon-512.png`** — App icons (placeholders, replace with custom designs)
 
-The web UI includes a **📲 Install** button (visible only on compatible browsers when the app can be installed) and an iOS hint for Safari users.
-
 #### How Users Install It
 
-- **Android Chrome** — Automatic "Install app" banner or click the **📲 Install** button in the app, or use Menu (⋮) → "Add to Home screen"
-- **iOS Safari** — Share (↑) → "Add to Home Screen" (iOS doesn't support automatic install prompts, but the app shows a hint)
+- **Android Chrome** — use Menu (⋮) → "Add to Home screen"
+- **iOS Safari** — Share (↑) → "Add to Home Screen"
 - **Desktop Chrome/Edge** — Address bar install icon or Menu → "Install Zsozso Wallet"
 
 #### Offline Support

@@ -188,6 +188,26 @@ pub fn app() -> Element {
         }
     };
     
+    let network_toggle = move |_| {
+        let next = if *current_network.read() == NetworkEnvironment::Production {
+            NetworkEnvironment::Test
+        } else {
+            NetworkEnvironment::Production
+        };
+        current_network.set(next);
+        generated_xdr.set(String::new());
+    };
+    
+    let language_toggle = move |_| {
+        let current_lang = *language.read();
+        let next_lang = if current_lang == Language::English {
+            Language::Hungarian
+        } else {
+            Language::English
+        };
+        language.set(next_lang);
+    };
+    
     // === Render preparation ===
     let lang = *language.read();
     let i18n = ui_i18n(lang);
@@ -226,42 +246,22 @@ pub fn app() -> Element {
         div { style: "padding: 30px; font-family: sans-serif; max-width: 550px; margin: auto;",
             h2 { "Zsozso" }
 
-            // === NETWORK SWITCHER, LANGUAGE SWITCHER, AND PWA BUTTON ===
+            // === NETWORK SWITCHER, LANGUAGE SWITCHER ===
             div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
                 // Network switcher button
                 button {
                     style: "{network_btn_style}",
-                    onclick: move |_| {
-                        let next = if *current_network.read() == NetworkEnvironment::Production {
-                            NetworkEnvironment::Test
-                        } else {
-                            NetworkEnvironment::Production
-                        };
-                        current_network.set(next);
-                        generated_xdr.set(String::new());
-                    },
+                    onclick: network_toggle,
                     "{network_btn_label}"
                 }
                 
                 // Language switcher button
                 button {
                     style: "{language_btn_style}",
-                    onclick: move |_| {
-                        let current_lang = *language.read();
-                        let next_lang = if current_lang == Language::English {
-                            Language::Hungarian
-                        } else {
-                            Language::English
-                        };
-                        language.set(next_lang);
-                    },
+                    onclick: language_toggle,
                     if *language.read() == Language::English { "Magyar" } else { "English" }
                 }
-
-                {render_pwa_install_button()}
             }
-
-            {render_ios_install_hint()}
 
             // --- ADDRESS DISPLAY ---
             div { style: "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
@@ -376,52 +376,4 @@ fn log(msg: &str) {
 #[cfg(target_arch = "wasm32")]
 fn log(msg: &str) {
     web_sys::console::log_1(&msg.into());
-}
-
-/// Render PWA install button (web platform only).
-#[cfg(target_arch = "wasm32")]
-fn render_pwa_install_button() -> Element {
-    rsx! {
-        button {
-            id: "pwa-install-btn",
-            style: "display: none; padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #28a745;",
-            onclick: move |_| {
-                wasm_bindgen_futures::spawn_local(async {
-                    let window = web_sys::window().unwrap();
-                    if let Ok(func) = js_sys::Reflect::get(&window, &"triggerPwaInstall".into()) {
-                        if let Some(f) = func.dyn_ref::<js_sys::Function>() {
-                            if let Ok(result) = f.call0(&window) {
-                                if let Ok(promise) = result.dyn_into::<js_sys::Promise>() {
-                                    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-                                }
-                            }
-                        }
-                    }
-                });
-            },
-            "📲 Install"
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn render_pwa_install_button() -> Element {
-    rsx! {}
-}
-
-/// Render iOS install hint (web platform only).
-#[cfg(target_arch = "wasm32")]
-fn render_ios_install_hint() -> Element {
-    rsx! {
-        div {
-            id: "ios-install-hint",
-            style: "display: none; background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;",
-            "📲 Telepítéshez: Share (↑) → Add to Home Screen"
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn render_ios_install_hint() -> Element {
-    rsx! {}
 }

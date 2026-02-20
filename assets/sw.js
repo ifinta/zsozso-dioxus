@@ -4,7 +4,6 @@ const ASSETS_TO_CACHE = [
     '/index.html',
     '/assets/dioxus/zsozso.js',
     '/assets/dioxus/zsozso_bg.wasm',
-    '/assets/pwa-install.js',
     '/manifest.json',
 ];
 
