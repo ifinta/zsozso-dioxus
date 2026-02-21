@@ -6,7 +6,7 @@
     <title>Zsozso Wallet - </title>
     
     <!-- PWA Manifest and Theme -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/app/manifest.json">
     <meta name="theme-color" content="#17a2b8">
     
     <!-- iOS PWA Support -->
@@ -21,7 +21,7 @@
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/app/sw.js');
         }
     </script>
 </body>

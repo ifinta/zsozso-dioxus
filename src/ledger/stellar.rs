@@ -27,13 +27,13 @@ struct StellarNetworkConfig {
 fn stellar_network(env: NetworkEnvironment) -> StellarNetworkConfig {
     match env {
         NetworkEnvironment::Test => StellarNetworkConfig {
-            name: "TESTNET",
+            name: "TESTNET ⚠️",
             horizon_url: "https://horizon-testnet.stellar.org",
             passphrase: "Test SDF Network ; September 2015",
             friendbot_url: Some("https://friendbot.stellar.org"),
         },
         NetworkEnvironment::Production => StellarNetworkConfig {
-            name: "MAINNET ⚠️",
+            name: "MAINNET",
             horizon_url: "https://horizon.stellar.org",
             passphrase: "Public Global Stellar Network ; September 2015",
             friendbot_url: None,
