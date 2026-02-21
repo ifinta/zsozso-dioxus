@@ -15,7 +15,7 @@ use serde::Deserialize;
 
 use super::{KeyPair, Ledger, NetworkEnvironment, NetworkInfo};
 use crate::i18n::Language;
-use super::i18n::{LedgerI18n, ledger_i18n};
+use super::i18n::ledger_i18n;
 
 struct StellarNetworkConfig {
     name: &'static str,

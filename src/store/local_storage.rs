@@ -1,6 +1,6 @@
 use super::Store;
 use crate::i18n::Language;
-use super::i18n::{StoreI18n, store_i18n};
+use super::i18n::store_i18n;
 
 /// On web platforms, uses the browser's localStorage API.
 /// The secret is stored under a namespaced key: "{service}:{account}".
