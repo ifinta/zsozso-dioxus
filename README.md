@@ -137,7 +137,7 @@ cargo build --release
 dx serve --platform web
 
 # Release build
-dx build --release --platform web
+dx build --release --platform web --features web
 # Output in target/dx/zsozso/release/web/public/
 
 # Serve the release build locally
@@ -145,6 +145,21 @@ python3 -m http.server 8080 -d target/dx/zsozso/release/web/public/
 # Or with npx:
 npx serve target/dx/zsozso/release/web/public/ -l 8080
 ```
+#### Deployment
+
+/var/www/html/app/
+├── index.html (from build output)
+├── sw.js (from assets/ or from project root)
+├── manifest.json (from assets/ or from project root)
+├── icon-192.png (from assets/ or from project root)
+├── icon-512.png (from assets/ or from project root)
+└── assets/
+    ├── zsozso-dxh*.js (from build output)
+    └── zsozso_bg-dxh*.wasm (from build output)
+
+A change of the CACHE_NAME in the sw.js at every deploy a need 
+(the browser will reread the cache at the user...):
+const CACHE_NAME = 'zsozso-v2'; => 'zsozso-v3' ...
 
 ### Feature Flags
 
