@@ -145,21 +145,29 @@ python3 -m http.server 8080 -d target/dx/zsozso/release/web/public/
 # Or with npx:
 npx serve target/dx/zsozso/release/web/public/ -l 8080
 ```
-#### Deployment
+## Deployment
 
-/var/www/html/app/
-├── index.html (from build output)
-├── sw.js (from assets/ or from project root)
-├── manifest.json (from assets/ or from project root)
-├── icon-192.png (from assets/ or from project root)
-├── icon-512.png (from assets/ or from project root)
-└── assets/
-    ├── zsozso-dxh*.js (from build output)
-    └── zsozso_bg-dxh*.wasm (from build output)
+```bash
+# /var/www/html/app/
+# ├── index.html (from build output)
+# ├── sw.js (from assets/ or from project root)
+# ├── manifest.json (from assets/ or from project root)
+# ├── icon-192.png (from assets/ or from project root)
+# ├── icon-512.png (from assets/ or from project root)
+# └── assets/
+#     ├── zsozso-dxh*.js (from build output)
+#     └── zsozso_bg-dxh*.wasm (from build output)
 
-A change of the CACHE_NAME in the sw.js at every deploy a need 
-(the browser will reread the cache at the user...):
+# A change of the CACHE_NAME in the sw.js at every deploy a need 
+# (the browser will reread the cache at the user...):
 const CACHE_NAME = 'zsozso-v2'; => 'zsozso-v3' ...
+
+# I use an intermediate directory to collect the deployment files in dist/app
+# Later it is possible to use python or npx to serve the pages from dist/
+npx serve dist/ -l 8080
+
+# From the browser then the app is reachable with this link: http://localhost:8080/app/
+```
 
 ### Feature Flags
 
