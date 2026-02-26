@@ -55,6 +55,8 @@ pub trait UiI18n {
     
     // Clipboard
     fn copied(&self) -> &'static str;
+    fn clipboard_modal_text(&self) -> &'static str;
+    fn btn_clear_clipboard(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

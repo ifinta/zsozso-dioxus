@@ -1,53 +1,38 @@
 use dioxus::prelude::*;
-use super::log;
-use crate::i18n::Language;
-use super::i18n::ui_i18n;
 
-/// Copy text to clipboard with timed reset.
-/// On desktop: uses arboard, clears clipboard after 30s for secrets.
-/// On web: uses navigator.clipboard API, clears clipboard after 30s for secrets.
+/// Copy text to clipboard.
+/// On desktop: uses arboard.
+/// On web: uses navigator.clipboard API and marks clipboard as dirty.
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool) {
-    spawn(async move {
-        if let Ok(mut cb) = arboard::Clipboard::new() {
-            let _ = cb.set_text(text);
-
-            copied_signal.set(true);
-
-            let wait_secs = if is_secret { 30 } else { 10 };
-            tokio::time::sleep(std::time::Duration::from_secs(wait_secs)).await;
-
-            if is_secret {
-                let _ = cb.set_text("".to_string());
-                std::thread::sleep(std::time::Duration::from_millis(500));
-                let i18n = ui_i18n(Language::default());
-                log(&i18n.clipboard_cleared().to_string());
-            }
-
-            copied_signal.set(false);
-        }
-    });
+pub fn copy_to_clipboard(text: &str) {
+    if let Ok(mut cb) = arboard::Clipboard::new() {
+        let _ = cb.set_text(text.to_string());
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool) {
+pub fn copy_to_clipboard(text: &str) {
+    let text = text.to_string();
+    let _ = js_sys::eval("window.__zsozso_clipboard_dirty = true");
     spawn(async move {
-        let ok = write_to_web_clipboard(&text).await;
-        if ok {
-            copied_signal.set(true);
+        write_to_web_clipboard(&text).await;
+    });
+}
 
-            let wait_secs = if is_secret { 30 } else { 10 };
-            gloo_timers::future::sleep(std::time::Duration::from_secs(wait_secs)).await;
+/// Clear the clipboard content.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn clear_clipboard() {
+    if let Ok(mut cb) = arboard::Clipboard::new() {
+        let _ = cb.set_text("".to_string());
+    }
+}
 
-            if is_secret {
-                let _ = write_to_web_clipboard("").await;
-                let i18n = ui_i18n(Language::default());
-                log(&i18n.clipboard_cleared().to_string());
-            }
-
-            copied_signal.set(false);
-        }
+#[cfg(target_arch = "wasm32")]
+pub fn clear_clipboard() {
+    let _ = js_sys::eval("window.__zsozso_clipboard_dirty = false");
+    spawn(async move {
+        write_to_web_clipboard("").await;
     });
 }
 
@@ -59,4 +44,36 @@ async fn write_to_web_clipboard(text: &str) -> bool {
     let clipboard = window.navigator().clipboard();
     let promise = clipboard.write_text(text);
     JsFuture::from(promise).await.is_ok()
+}
+
+/// Register beforeunload and pagehide handlers that clear the clipboard
+/// when the user closes the tab or navigates away.
+/// Implemented in pure JS (via eval) to minimize overhead during page teardown.
+/// Only clears when the dirty flag is set (i.e., something was copied).
+#[cfg(target_arch = "wasm32")]
+pub fn register_beforeunload_cleanup() {
+    let _ = js_sys::eval(r#"
+        if (!window.__zsozso_unload_registered) {
+            window.__zsozso_clipboard_dirty = false;
+            window.__zsozso_unload_registered = true;
+            function __zsozso_clear_clipboard() {
+                if (!window.__zsozso_clipboard_dirty) return;
+                window.__zsozso_clipboard_dirty = false;
+                try { navigator.clipboard.writeText(' '); } catch(e) {}
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = ' ';
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch(e) {}
+            }
+            window.addEventListener('beforeunload', __zsozso_clear_clipboard);
+            window.addEventListener('pagehide', __zsozso_clear_clipboard);
+        }
+    "#);
 }

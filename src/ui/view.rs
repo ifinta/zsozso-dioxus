@@ -84,8 +84,8 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                         }
                         button {
                             style: "background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px;",
-                            onclick: move |_| ctrl.copy_secret_to_clipboard(s.clipboard_copied),
-                            if *s.clipboard_copied.read() { "{i18n.copied()}" } else { "{i18n.copy_label()}" }
+                            onclick: move |_| ctrl.copy_secret_to_clipboard(),
+                            "{i18n.copy_label()}"
                         }
                         if has_faucet {
                             button {
@@ -128,8 +128,8 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                         span { style: "font-size: 0.8em; font-weight: bold;", "{i18n.lbl_signed_xdr()}" }
                         button {
                             style: "font-size: 0.7em; padding: 4px 8px;",
-                            onclick: move |_| ctrl.copy_xdr_to_clipboard(s.xdr_copied),
-                            if *s.xdr_copied.read() { "{i18n.copied()}" } else { "{i18n.copy_xdr_label()}" }
+                            onclick: move |_| ctrl.copy_xdr_to_clipboard(),
+                            "{i18n.copy_xdr_label()}"
                         }
                     }
                     pre {
@@ -140,6 +140,22 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                         style: "width: 100%; margin-top: 15px; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold;",
                         onclick: move |_| ctrl.submit_transaction_action(),
                         "{i18n.btn_submit_tx()}"
+                    }
+                }
+            }
+        }
+
+        // Clipboard modal overlay
+        if *s.clipboard_modal_open.read() {
+            div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;",
+                div { style: "background: white; padding: 30px; border-radius: 12px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);",
+                    p { style: "margin-bottom: 20px; font-size: 1em; color: #333;",
+                        "{i18n.clipboard_modal_text()}"
+                    }
+                    button {
+                        style: "padding: 12px 24px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                        onclick: move |_| ctrl.dismiss_clipboard_modal(),
+                        "{i18n.btn_clear_clipboard()}"
                     }
                 }
             }

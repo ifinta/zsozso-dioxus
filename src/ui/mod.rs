@@ -14,12 +14,16 @@ pub fn app() -> Element {
     let state = use_wallet_state();
     let ctrl = AppController::new(state);
 
-    // Cross-platform clipboard clearing (can stay here or move to a hook)
+    // Desktop: clear clipboard when the component is dropped (window closing)
     #[cfg(not(target_arch = "wasm32"))]
     use_drop(move || {
-        if let Ok(mut cb) = arboard::Clipboard::new() {
-            let _ = cb.set_text("".to_string());
-        }
+        clipboard::clear_clipboard();
+    });
+
+    // Web: clear clipboard when the tab/browser is closed
+    #[cfg(target_arch = "wasm32")]
+    use_hook(|| {
+        clipboard::register_beforeunload_cleanup();
     });
 
     // Pass the controller and state to the view

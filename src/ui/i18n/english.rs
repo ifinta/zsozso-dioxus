@@ -142,4 +142,12 @@ impl UiI18n for EnglishUi {
     fn copied(&self) -> &'static str {
         "COPIED!"
     }
+
+    fn clipboard_modal_text(&self) -> &'static str {
+        "The content has been copied to the clipboard. When you close this dialog, the clipboard will be cleared for security."
+    }
+
+    fn btn_clear_clipboard(&self) -> &'static str {
+        "🗑️ Clear clipboard content"
+    }
 }

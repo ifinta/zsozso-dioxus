@@ -10,12 +10,11 @@ pub struct WalletState {
     pub public_key: Signal<Option<String>>,
     pub secret_key_hidden: Signal<Option<Zeroizing<String>>>,
     pub show_secret: Signal<bool>,
-    pub clipboard_copied: Signal<bool>,
     pub input_value: Signal<String>,
     pub generated_xdr: Signal<String>,
-    pub xdr_copied: Signal<bool>,
     pub submission_status: Signal<TxStatus>,
     pub current_network: Signal<NetworkEnvironment>,
+    pub clipboard_modal_open: Signal<bool>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -24,11 +23,10 @@ pub fn use_wallet_state() -> WalletState {
         public_key: use_signal(|| None),
         secret_key_hidden: use_signal(|| None),
         show_secret: use_signal(|| false),
-        clipboard_copied: use_signal(|| false),
         input_value: use_signal(String::new),
         generated_xdr: use_signal(String::new),
-        xdr_copied: use_signal(|| false),
         submission_status: use_signal(|| TxStatus::Waiting),
         current_network: use_signal(|| NetworkEnvironment::Production),
+        clipboard_modal_open: use_signal(|| false),
     }
 }

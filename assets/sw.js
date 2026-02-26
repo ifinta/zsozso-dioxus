@@ -44,7 +44,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Hash-elt asset-ek (.js, .wasm) → cache-first
+    // Hashed assets (.js, .wasm) → cache-first
     // Their content never changes (guaranteed by the hash), so
     // it's enough to download once and always serve from cache afterwards.
     const isCacheableAsset = /\.(js|wasm|css|png|jpg|svg|ico|woff2?)$/.test(url.pathname);

@@ -142,4 +142,12 @@ impl UiI18n for HungarianUi {
     fn copied(&self) -> &'static str {
         "MÁSOLVA!"
     }
+
+    fn clipboard_modal_text(&self) -> &'static str {
+        "A tartalom a vágólapra került. Amikor bezárod ezt az ablakot, a vágólap tartalma biztonsági okokból törlődik."
+    }
+
+    fn btn_clear_clipboard(&self) -> &'static str {
+        "🗑️ Törlöm a vágólap tartalmát"
+    }
 }

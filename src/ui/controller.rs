@@ -6,7 +6,7 @@ use super::status::TxStatus;
 use super::i18n::ui_i18n;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::Store;
-use super::clipboard::safe_copy;
+use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
 
 #[derive(Clone, Copy)]
@@ -44,19 +44,39 @@ impl AppController {
         }
     }
 
-    /// Securely copy the secret key to clipboard
-    pub fn copy_secret_to_clipboard(&self, copied_signal: Signal<bool>) {
+    /// Securely copy the secret key to clipboard and show modal
+    pub fn copy_secret_to_clipboard(&self) {
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
-            safe_copy(secret.to_string(), copied_signal, true);
+            copy_to_clipboard(secret.as_str());
+            let lang = *self.s.language.read();
+            let i18n = ui_i18n(lang);
+            log(&i18n.copied().to_string());
+            let mut modal = self.s.clipboard_modal_open;
+            modal.set(true);
         }
     }
 
-    /// Copy the generated XDR to clipboard
-    pub fn copy_xdr_to_clipboard(&self, copied_signal: Signal<bool>) {
+    /// Copy the generated XDR to clipboard and show modal
+    pub fn copy_xdr_to_clipboard(&self) {
         let xdr = self.s.generated_xdr.read().clone();
         if !xdr.is_empty() {
-            safe_copy(xdr, copied_signal, false);
+            copy_to_clipboard(&xdr);
+            let lang = *self.s.language.read();
+            let i18n = ui_i18n(lang);
+            log(&i18n.copied().to_string());
+            let mut modal = self.s.clipboard_modal_open;
+            modal.set(true);
         }
+    }
+
+    /// Dismiss the clipboard modal and clear clipboard content
+    pub fn dismiss_clipboard_modal(&self) {
+        clear_clipboard();
+        let mut modal = self.s.clipboard_modal_open;
+        modal.set(false);
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        log(&i18n.clipboard_cleared().to_string());
     }
 
     /// Activate a test network account (Faucet call)
