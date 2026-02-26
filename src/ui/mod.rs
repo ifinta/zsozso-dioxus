@@ -14,7 +14,7 @@ pub fn app() -> Element {
     let state = use_wallet_state();
     let ctrl = AppController::new(state);
 
-    // Cross-platform vágólap tisztítás (maradhat itt vagy mehet hook-ba)
+    // Cross-platform clipboard clearing (can stay here or move to a hook)
     #[cfg(not(target_arch = "wasm32"))]
     use_drop(move || {
         if let Ok(mut cb) = arboard::Clipboard::new() {
@@ -22,8 +22,7 @@ pub fn app() -> Element {
         }
     });
 
-    // A view-nak átadjuk a controllert és a state-et
-    // Az app_view!() makró vagy függvény most már ezekből dolgozik
+    // Pass the controller and state to the view
     view::render_app(state, ctrl)
 }
 

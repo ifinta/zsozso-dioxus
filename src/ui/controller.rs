@@ -19,7 +19,7 @@ impl AppController {
         Self { s: state }
     }
 
-    /// Új kulcspár generálása és mentése a state-be
+    /// Generate a new keypair and store it in the state
     pub fn generate_key(&self) {
         let (pk, sk) = generate_keypair(*self.s.current_network.read(), *self.s.language.read());
         let mut public_key = self.s.public_key;
@@ -28,7 +28,7 @@ impl AppController {
         secret_key_hidden.set(Some(Zeroizing::new(sk)));
     }
 
-    /// Kulcspár importálása a felhasználói input alapján
+    /// Import a keypair from user input
     pub fn import_key(&self) {
         let raw_input = self.s.input_value.read().clone();
         let net = *self.s.current_network.read();
@@ -44,14 +44,14 @@ impl AppController {
         }
     }
 
-    /// Titkos kulcs vágólapra másolása biztonságosan
+    /// Securely copy the secret key to clipboard
     pub fn copy_secret_to_clipboard(&self, copied_signal: Signal<bool>) {
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
             safe_copy(secret.to_string(), copied_signal, true);
         }
     }
 
-    /// Generált XDR másolása vágólapra
+    /// Copy the generated XDR to clipboard
     pub fn copy_xdr_to_clipboard(&self, copied_signal: Signal<bool>) {
         let xdr = self.s.generated_xdr.read().clone();
         if !xdr.is_empty() {
@@ -59,7 +59,7 @@ impl AppController {
         }
     }
 
-    /// Teszt hálózati fiók aktiválása (Faucet hívás)
+    /// Activate a test network account (Faucet call)
     pub fn activate_test_account_action(&self) {
         let pubkey = self.s.public_key.read().clone();
         let net_env = *self.s.current_network.read();
@@ -74,7 +74,7 @@ impl AppController {
         });
     }
 
-    /// XDR generálása a fiók adatai alapján
+    /// Generate XDR based on account data
     pub fn fetch_and_generate_xdr_action(&self) {
         let secret_key = self.s.secret_key_hidden.read().as_ref().map(|s| s.to_string());
         let net_env = *self.s.current_network.read();
@@ -94,7 +94,7 @@ impl AppController {
         });
     }
 
-    /// Tranzakció beküldése a hálózatra
+    /// Submit a transaction to the network
     pub fn submit_transaction_action(&self) {
         let xdr = self.s.generated_xdr.read().clone();
         let net_env = *self.s.current_network.read();
@@ -107,7 +107,7 @@ impl AppController {
         });
     }
 
-    /// Kulcs mentése helyi tárolóba (pl. fájl vagy böngésző storage)
+    /// Save key to local store (e.g. file or browser storage)
     pub fn save_to_store(&self) {
         let lang = *self.s.language.read();
         let i18n = ui_i18n(lang);
@@ -123,7 +123,7 @@ impl AppController {
         }
     }
 
-    /// Kulcs betöltése helyi tárolóból
+    /// Load key from local store
     pub fn load_from_store(&self) {
         let lang = *self.s.language.read();
         let net = *self.s.current_network.read();

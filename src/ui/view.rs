@@ -7,7 +7,7 @@ use crate::i18n::Language;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 
 pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
-    // Render-előkészítés (számított értékek)
+    // Render preparation (computed values)
     let lang = *s.language.read();
     let i18n = ui_i18n(lang);
     let net_env = *s.current_network.read();
@@ -23,7 +23,7 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
 
     let status_display = status_text(&s.submission_status.read(), i18n.as_ref());
 
-    // Stílusok (megtartva az eredetit)
+    // Styles (kept from original)
     let network_btn_style = format!(
         "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: {};",
         if !is_production { "#dc3545" } else { "#17a2b8" }
