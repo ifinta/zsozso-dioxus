@@ -1,8 +1,11 @@
 use dioxus::prelude::*;
+use super::log;
+use crate::i18n::Language;
+use super::i18n::ui_i18n;
 
 /// Copy text to clipboard with timed reset.
 /// On desktop: uses arboard, clears clipboard after 30s for secrets.
-/// On web: uses navigator.clipboard API, resets indicator only.
+/// On web: uses navigator.clipboard API, clears clipboard after 30s for secrets.
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool) {
@@ -18,6 +21,8 @@ pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool)
             if is_secret {
                 let _ = cb.set_text("".to_string());
                 std::thread::sleep(std::time::Duration::from_millis(500));
+                let i18n = ui_i18n(Language::default());
+                log(&i18n.clipboard_cleared().to_string());
             }
 
             copied_signal.set(false);
@@ -34,6 +39,12 @@ pub fn safe_copy(text: String, mut copied_signal: Signal<bool>, is_secret: bool)
 
             let wait_secs = if is_secret { 30 } else { 10 };
             gloo_timers::future::sleep(std::time::Duration::from_secs(wait_secs)).await;
+
+            if is_secret {
+                let _ = write_to_web_clipboard("").await;
+                let i18n = ui_i18n(Language::default());
+                log(&i18n.clipboard_cleared().to_string());
+            }
 
             copied_signal.set(false);
         }

@@ -136,6 +136,7 @@ impl AppController {
         
         match store.load() {
             Ok(secret) => {
+                log(&i18n.key_loaded_len(secret.len()));
                 let lgr = StellarLedger::new(net, lang);
                 if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
                     pk_signal.set(Some(pub_key_str));
