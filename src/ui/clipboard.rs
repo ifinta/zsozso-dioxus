@@ -59,18 +59,24 @@ pub fn register_beforeunload_cleanup() {
             function __zsozso_clear_clipboard() {
                 if (!window.__zsozso_clipboard_dirty) return;
                 window.__zsozso_clipboard_dirty = false;
-                try { navigator.clipboard.writeText(' '); } catch(e) {}
+                // Use a copy event handler to synchronously override clipboard data.
+                // This is the only reliable way to clear the clipboard during page unload.
+                var copyHandler = function(e) {
+                    e.clipboardData.setData('text/plain', '');
+                    e.preventDefault();
+                };
+                document.addEventListener('copy', copyHandler, true);
                 try {
                     var ta = document.createElement('textarea');
-                    ta.value = ' ';
+                    ta.value = '.';
                     ta.style.position = 'fixed';
-                    ta.style.left = '-9999px';
+                    ta.style.opacity = '0';
                     document.body.appendChild(ta);
-                    ta.focus();
                     ta.select();
                     document.execCommand('copy');
                     document.body.removeChild(ta);
                 } catch(e) {}
+                document.removeEventListener('copy', copyHandler, true);
             }
             window.addEventListener('beforeunload', __zsozso_clear_clipboard);
             window.addEventListener('pagehide', __zsozso_clear_clipboard);
