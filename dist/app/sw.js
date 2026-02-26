@@ -1,17 +1,17 @@
-// Cache verzió — minden deploy-nál növeld, hogy a régi cache törlődjön
-const CACHE_NAME = 'zsozso-v2';
+// Cache version — increment on every deploy so the old cache gets cleared
+const CACHE_NAME = 'zsozso-v0.12';
 
-// Nem használunk pre-cache listát, mert a Dioxus hash-elt fájlneveket generál
-// (pl. zsozso-dxhABC123.js), amelyek minden build-nél változnak.
-// Ehelyett runtime cache-elünk: a fájlok az első betöltéskor kerülnek cache-be.
+// We don't use a pre-cache list because Dioxus generates hashed filenames
+// (e.g. zsozso-dxhABC123.js) that change with every build.
+// Instead we cache at runtime: files are cached on first load.
 
 self.addEventListener('install', event => {
-    // Azonnal aktiválódjon, ne várjon a régi SW leállására
+    // Activate immediately, don't wait for the old SW to stop
     self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-    // Régi cache verziók törlése
+    // Delete old cache versions
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(
@@ -25,8 +25,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Navigációs kérések (HTML oldalak) → network-first
-    // Így az index.html mindig frissül, ha van hálózat
+    // Navigation requests (HTML pages) → network-first
+    // This way index.html always refreshes when there is a network connection
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
@@ -44,9 +44,9 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Hash-elt asset-ek (.js, .wasm) → cache-first
-    // Ezek tartalma soha nem változik (a hash garantálja), tehát
-    // elég egyszer letölteni és utána mindig a cache-ből szolgálni.
+    // Hashed assets (.js, .wasm) → cache-first
+    // Their content never changes (guaranteed by the hash), so
+    // it's enough to download once and always serve from cache afterwards.
     const isCacheableAsset = /\.(js|wasm|css|png|jpg|svg|ico|woff2?)$/.test(url.pathname);
 
     if (isCacheableAsset) {
@@ -65,7 +65,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Minden más (API hívások, manifest.json stb.) → network-only, fallback cache
+    // Everything else (API calls, manifest.json, etc.) → network-only, fallback to cache
     event.respondWith(
         fetch(event.request)
             .then(response => {
