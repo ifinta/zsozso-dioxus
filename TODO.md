@@ -1,7 +1,6 @@
 # todo:
 
 ## simple steps:
-- a README.md -ben elöl egy rész a user-eknek magyarul és angolul a PWA app-ról, röviden: Mi ez (ez egy Progressive Web Application ... csak a browser-ben fut, ...), Link az app-ra, Az installálás, Update miként megy, Hogyan lehet eltávolítani
 - A verzió jelenjen meg a UI-n valahol.
 - page-es struktúrára váltás az AI-ban, eddigiek settins - lsd. expo
 
