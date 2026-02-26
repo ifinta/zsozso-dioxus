@@ -1,18 +1,18 @@
 # todo:
 
 ## simple steps:
+- Join az expo-ból (a ping meghívása a Ledger okos bővítése után)
 - A verzió jelenjen meg a UI-n valahol.
-- page-es struktúrára váltás az AI-ban, eddigiek settins - lsd. expo
+- Password vagy PIN code, Passkey bizonyos lapok elérésére (betöltés, settings, ...)
 
 ## known issues:
 #### (not yet solved, but it isn't mandant to correct it):
+- Nem frissül iOS-en a Home Screen-re mentett App automatikusan, vagy nem jól csináltam valamit (?)
 - A clipboard törlés a secret-re még nem megy, bár jól néz ki a kódban...
 - A státusz részben nem javul, ha váltok nyelvet.
 
 ## bigger steps:
 - Trait a futtatási környezet meghatározására, mint a nyelv, de nem nyomógombos választással, hanem kérdezze le, tárolja el, és mindenhol innen kérje le. Main szintjén, és a main-ban határozódjon meg, mentődjön el.
-- Join az expo-ból (a ping meghívása a Ledger okos bővítése után)
-- Password vagy PIN code, Passkey bizonyos lapok elérésére (betöltés, settings, ...)
 - ikonok, grafika feljavítása
 
 # for dev's:
