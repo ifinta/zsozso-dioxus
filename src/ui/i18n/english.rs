@@ -150,4 +150,14 @@ impl UiI18n for EnglishUi {
     fn btn_clear_clipboard(&self) -> &'static str {
         "🗑️ Clear clipboard content"
     }
+
+    // Tab labels
+    fn tab_home(&self) -> &'static str { "Home" }
+    fn tab_networking(&self) -> &'static str { "Network" }
+    fn tab_info(&self) -> &'static str { "Info" }
+    fn tab_settings(&self) -> &'static str { "Settings" }
+
+    // Start gate modal
+    fn gate_title(&self) -> &'static str { "Welcome to Zsozso" }
+    fn btn_next(&self) -> &'static str { "Next" }
 }

@@ -2,6 +2,7 @@ mod clipboard;
 pub mod actions;
 pub mod i18n;
 pub mod status;
+pub mod tabs;
 pub mod view;
 pub mod state;
 pub mod controller;

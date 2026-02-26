@@ -57,6 +57,16 @@ pub trait UiI18n {
     fn copied(&self) -> &'static str;
     fn clipboard_modal_text(&self) -> &'static str;
     fn btn_clear_clipboard(&self) -> &'static str;
+
+    // Tab labels
+    fn tab_home(&self) -> &'static str;
+    fn tab_networking(&self) -> &'static str;
+    fn tab_info(&self) -> &'static str;
+    fn tab_settings(&self) -> &'static str;
+
+    // Start gate modal
+    fn gate_title(&self) -> &'static str;
+    fn btn_next(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

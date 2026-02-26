@@ -3,6 +3,7 @@ use zeroize::Zeroizing;
 use crate::ledger::NetworkEnvironment;
 use crate::i18n::Language;
 use super::status::TxStatus;
+use super::tabs::Tab;
 
 #[derive(Clone, Copy)]
 pub struct WalletState {
@@ -15,6 +16,8 @@ pub struct WalletState {
     pub submission_status: Signal<TxStatus>,
     pub current_network: Signal<NetworkEnvironment>,
     pub clipboard_modal_open: Signal<bool>,
+    pub active_tab: Signal<Tab>,
+    pub passed_gate: Signal<bool>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -28,5 +31,7 @@ pub fn use_wallet_state() -> WalletState {
         submission_status: use_signal(|| TxStatus::Waiting),
         current_network: use_signal(|| NetworkEnvironment::Production),
         clipboard_modal_open: use_signal(|| false),
+        active_tab: use_signal(Tab::default),
+        passed_gate: use_signal(|| false),
     }
 }

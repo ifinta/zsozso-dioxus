@@ -150,4 +150,14 @@ impl UiI18n for HungarianUi {
     fn btn_clear_clipboard(&self) -> &'static str {
         "🗑️ Törlöm a vágólap tartalmát"
     }
+
+    // Tab labels
+    fn tab_home(&self) -> &'static str { "Főoldal" }
+    fn tab_networking(&self) -> &'static str { "Hálózat" }
+    fn tab_info(&self) -> &'static str { "Infó" }
+    fn tab_settings(&self) -> &'static str { "Beállítások" }
+
+    // Start gate modal
+    fn gate_title(&self) -> &'static str { "Üdvözöl a Zsozso" }
+    fn btn_next(&self) -> &'static str { "Tovább" }
 }
