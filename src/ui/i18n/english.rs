@@ -63,4 +63,11 @@ impl UiI18n for EnglishUi {
     // Start gate modal
     fn gate_title(&self) -> &'static str { "Welcome to Zsozso" }
     fn btn_next(&self) -> &'static str { "Next" }
+
+    // Networking tab / Smart Contract
+    fn btn_ping(&self) -> &'static str { "\u{1F3D3} Ping" }
+    fn ping_calling(&self) -> &'static str { "\u{1F4E1} Calling contract..." }
+    fn ping_success(&self, msg: &str) -> String { format!("\u{2705} {}", msg) }
+    fn ping_error(&self, e: &str) -> String { format!("\u{274C} {}", e) }
+    fn ping_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Load a key first (Settings tab)." }
 }

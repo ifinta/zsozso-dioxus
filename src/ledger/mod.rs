@@ -1,7 +1,9 @@
 mod stellar;
 pub mod i18n;
+pub mod sc;
 
 pub use stellar::StellarLedger;
+
 
 /// Key pair: public address (G...) and secret key (S...)
 pub struct KeyPair {

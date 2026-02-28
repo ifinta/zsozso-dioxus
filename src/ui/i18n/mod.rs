@@ -67,6 +67,13 @@ pub trait UiI18n {
     // Start gate modal
     fn gate_title(&self) -> &'static str;
     fn btn_next(&self) -> &'static str;
+
+    // Networking tab / Smart Contract
+    fn btn_ping(&self) -> &'static str;
+    fn ping_calling(&self) -> &'static str;
+    fn ping_success(&self, msg: &str) -> String;
+    fn ping_error(&self, e: &str) -> String;
+    fn ping_no_key(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

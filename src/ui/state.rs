@@ -18,6 +18,7 @@ pub struct WalletState {
     pub clipboard_modal_open: Signal<bool>,
     pub active_tab: Signal<Tab>,
     pub passed_gate: Signal<bool>,
+    pub ping_status: Signal<Option<String>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -33,5 +34,6 @@ pub fn use_wallet_state() -> WalletState {
         clipboard_modal_open: use_signal(|| false),
         active_tab: use_signal(Tab::default),
         passed_gate: use_signal(|| false),
+        ping_status: use_signal(|| None),
     }
 }

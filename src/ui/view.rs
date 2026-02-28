@@ -45,7 +45,7 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
             div { style: "flex: 1; overflow-y: auto; padding: 20px 30px 90px;",
                 match active {
                     Tab::Home => home::render_home_tab(i18n.as_ref()),
-                    Tab::Networking => networking::render_networking_tab(i18n.as_ref()),
+                    Tab::Networking => networking::render_networking_tab(s, ctrl, i18n.as_ref()),
                     Tab::Info => info::render_info_tab(i18n.as_ref()),
                     Tab::Settings => settings::render_settings_tab(s, ctrl, i18n.as_ref()),
                 }

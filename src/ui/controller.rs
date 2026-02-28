@@ -8,6 +8,7 @@ use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::Store;
 use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
+use crate::ledger::sc::SmartContract;
 
 #[derive(Clone, Copy)]
 pub struct AppController {
@@ -190,5 +191,39 @@ impl AppController {
         let mut generated_xdr = self.s.generated_xdr;
         current_network.set(next);
         generated_xdr.set(String::new());
+    }
+
+    /// Call the zsozso-sc ping() contract function using the stored secret key
+    pub fn ping_contract_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let mut ping_status = self.s.ping_status;
+
+        // Use the in-memory secret key if available
+        let secret = match self.s.secret_key_hidden.read().as_ref() {
+            Some(sk) => sk.as_str().to_string(),
+            None => {
+                ping_status.set(Some(i18n.ping_no_key().to_string()));
+                return;
+            }
+        };
+
+        let net_env = *self.s.current_network.read();
+
+        ping_status.set(Some(i18n.ping_calling().to_string()));
+
+        spawn(async move {
+            let sc = crate::ledger::sc::zsozso_sc::ZsozsoSc::new(net_env, lang);
+            match sc.ping(&secret).await {
+                Ok(msg) => {
+                    let i18n = ui_i18n(lang);
+                    ping_status.set(Some(i18n.ping_success(&msg)));
+                }
+                Err(e) => {
+                    let i18n = ui_i18n(lang);
+                    ping_status.set(Some(i18n.ping_error(&e)));
+                }
+            }
+        });
     }
 }
