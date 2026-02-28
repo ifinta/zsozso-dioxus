@@ -64,6 +64,12 @@ impl UiI18n for HungarianUi {
     fn gate_title(&self) -> &'static str { "Üdvözöl a Zsozso" }
     fn btn_next(&self) -> &'static str { "Tovább" }
 
+    // Passkey authentication
+    fn authenticating(&self) -> &'static str { "Hitelesítés..." }
+    fn auth_failed(&self) -> &'static str { "A hitelesítés sikertelen" }
+    fn btn_exit(&self) -> &'static str { "Kilépés" }
+    fn no_prf_key(&self) -> &'static str { "Nincs passkey titkosítási kulcs. Először hitelesítsd magad újra." }
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str { "\u{1F3D3} Ping" }
     fn ping_calling(&self) -> &'static str { "\u{1F4E1} Szerződés hívása..." }

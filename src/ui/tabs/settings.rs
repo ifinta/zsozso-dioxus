@@ -71,8 +71,14 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
                 div { style: "display: flex; gap: 10px; flex-wrap: wrap;",
                     button {
                         onclick: move |_| {
-                            let mut show_secret = s.show_secret;
-                            show_secret.toggle()
+                            if *s.show_secret.read() {
+                                // Hiding — no auth needed
+                                let mut show_secret = s.show_secret;
+                                show_secret.set(false);
+                            } else {
+                                // Revealing — require passkey verification
+                                ctrl.reveal_secret();
+                            }
                         },
                         if *s.show_secret.read() { "{i18n.btn_hide_secret()}" } else { "{i18n.btn_reveal_secret()}" }
                     }

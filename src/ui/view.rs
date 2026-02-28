@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use super::state::WalletState;
+use super::state::{WalletState, AuthState};
 use super::controller::AppController;
 use super::i18n::ui_i18n;
 use super::tabs::Tab;
@@ -8,10 +8,40 @@ use super::tabs::{home, networking, info, settings};
 pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
     let lang = *s.language.read();
     let i18n = ui_i18n(lang);
-    let passed_gate = *s.passed_gate.read();
+    let auth_state = *s.auth_state.read();
 
-    // Start gate modal — shown before app content
-    if !passed_gate {
+    // ── Auth failed: terminal error modal ──
+    if auth_state == AuthState::Failed {
+        return rsx! {
+            div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 3000; font-family: sans-serif;",
+                div { style: "background: white; padding: 40px; border-radius: 16px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);",
+                    h2 { style: "margin: 0 0 12px; color: #dc3545;", "⚠️" }
+                    p { style: "margin: 0 0 30px; color: #333; font-size: 1em; font-weight: bold;",
+                        "{i18n.auth_failed()}"
+                    }
+                    button {
+                        style: "padding: 14px 48px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em;",
+                        onclick: move |_| {
+                            // Close window or blank the page
+                            let _ = js_sys::eval("window.close() || (document.body.innerHTML = '')");
+                        },
+                        "{i18n.btn_exit()}"
+                    }
+                }
+            }
+        };
+    }
+
+    // ── Gate modal: pending or authenticating ──
+    if auth_state != AuthState::Authenticated {
+        let is_busy = auth_state == AuthState::Authenticating;
+        let btn_label = if is_busy {
+            i18n.authenticating()
+        } else {
+            i18n.btn_next()
+        };
+        let btn_bg = if is_busy { "#6c757d" } else { "#007bff" };
+
         return rsx! {
             div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; font-family: sans-serif;",
                 div { style: "background: white; padding: 40px; border-radius: 16px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);",
@@ -20,12 +50,10 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                         "{i18n.gate_title()}"
                     }
                     button {
-                        style: "padding: 14px 48px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em;",
-                        onclick: move |_| {
-                            let mut gate = s.passed_gate;
-                            gate.set(true);
-                        },
-                        "{i18n.btn_next()}"
+                        style: "padding: 14px 48px; background: {btn_bg}; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em;",
+                        disabled: is_busy,
+                        onclick: move |_| ctrl.start_auth(),
+                        "{btn_label}"
                     }
                 }
             }

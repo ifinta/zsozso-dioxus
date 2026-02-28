@@ -5,6 +5,16 @@ use crate::i18n::Language;
 use super::status::TxStatus;
 use super::tabs::Tab;
 
+/// Passkey authentication state machine.
+#[derive(Clone, Copy, PartialEq, Default)]
+pub enum AuthState {
+    #[default]
+    Pending,        // gate modal shown, waiting for user to click
+    Authenticating, // passkey dialog in progress
+    Authenticated,  // success — show app tabs
+    Failed,         // terminal — show error modal
+}
+
 #[derive(Clone, Copy)]
 pub struct WalletState {
     pub language: Signal<Language>,
@@ -17,7 +27,8 @@ pub struct WalletState {
     pub current_network: Signal<NetworkEnvironment>,
     pub clipboard_modal_open: Signal<bool>,
     pub active_tab: Signal<Tab>,
-    pub passed_gate: Signal<bool>,
+    pub auth_state: Signal<AuthState>,
+    pub prf_key: Signal<Option<String>>,
     pub ping_status: Signal<Option<String>>,
 }
 
@@ -33,7 +44,8 @@ pub fn use_wallet_state() -> WalletState {
         current_network: use_signal(|| NetworkEnvironment::Production),
         clipboard_modal_open: use_signal(|| false),
         active_tab: use_signal(Tab::default),
-        passed_gate: use_signal(|| false),
+        auth_state: use_signal(AuthState::default),
+        prf_key: use_signal(|| None),
         ping_status: use_signal(|| None),
     }
 }

@@ -64,6 +64,12 @@ impl UiI18n for EnglishUi {
     fn gate_title(&self) -> &'static str { "Welcome to Zsozso" }
     fn btn_next(&self) -> &'static str { "Next" }
 
+    // Passkey authentication
+    fn authenticating(&self) -> &'static str { "Authenticating..." }
+    fn auth_failed(&self) -> &'static str { "Authentication failed" }
+    fn btn_exit(&self) -> &'static str { "Exit now" }
+    fn no_prf_key(&self) -> &'static str { "No passkey encryption key available. Re-authenticate first." }
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str { "\u{1F3D3} Ping" }
     fn ping_calling(&self) -> &'static str { "\u{1F4E1} Calling contract..." }

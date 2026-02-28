@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
 use zeroize::Zeroizing;
-use super::state::WalletState;
+use super::state::{WalletState, AuthState};
 use super::actions::*;
 use super::status::TxStatus;
 use super::i18n::ui_i18n;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::Store;
+use crate::store::passkey;
 use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
 use crate::ledger::sc::SmartContract;
@@ -18,6 +19,48 @@ pub struct AppController {
 impl AppController {
     pub fn new(state: WalletState) -> Self {
         Self { s: state }
+    }
+
+    /// Start passkey authentication (gate modal button).
+    /// On localhost the passkey check is skipped for easier testing.
+    pub fn start_auth(&self) {
+        let mut auth_state = self.s.auth_state;
+        let mut prf_key_signal = self.s.prf_key;
+
+        auth_state.set(AuthState::Authenticating);
+
+        spawn(async move {
+            if is_localhost() {
+                auth_state.set(AuthState::Authenticated);
+                return;
+            }
+            match passkey::passkey_init().await {
+                Ok(result) if result.success => {
+                    prf_key_signal.set(result.prf_key);
+                    auth_state.set(AuthState::Authenticated);
+                }
+                _ => {
+                    auth_state.set(AuthState::Failed);
+                }
+            }
+        });
+    }
+
+    /// Reveal the secret key after passkey verification.
+    /// On localhost the passkey check is skipped for easier testing.
+    pub fn reveal_secret(&self) {
+        let mut show_secret = self.s.show_secret;
+
+        spawn(async move {
+            if is_localhost() {
+                show_secret.set(true);
+                return;
+            }
+            match passkey::passkey_verify().await {
+                Ok(true) => show_secret.set(true),
+                _ => { /* auth failed or cancelled — don't reveal */ }
+            }
+        });
     }
 
     /// Generate a new keypair and store it in the state
@@ -128,7 +171,7 @@ impl AppController {
         });
     }
 
-    /// Save key to local store (e.g. file or browser storage)
+    /// Save key to local store — encrypted with passkey if PRF available
     pub fn save_to_store(&self) {
         let lang = *self.s.language.read();
         let i18n = ui_i18n(lang);
@@ -136,8 +179,27 @@ impl AppController {
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
             let store = new_store(lang);
             let secret = secret.clone();
+            let prf_key = self.s.prf_key.read().clone();
             spawn(async move {
-                match store.save(secret.as_str()).await {
+                let data_to_save = if is_localhost() {
+                    secret.to_string()
+                } else {
+                    let prf = match &prf_key {
+                        Some(key) => key.clone(),
+                        None => {
+                            log(&i18n.fmt_error(i18n.no_prf_key()));
+                            return;
+                        }
+                    };
+                    match passkey::passkey_encrypt(secret.as_str(), &prf).await {
+                        Ok(encrypted) => encrypted,
+                        Err(e) => {
+                            log(&i18n.fmt_error(&e));
+                            return;
+                        }
+                    }
+                };
+                match store.save(&data_to_save).await {
                     Ok(_) => log(&i18n.save_success().to_string()),
                     Err(e) => log(&i18n.fmt_error(&e)),
                 }
@@ -147,20 +209,39 @@ impl AppController {
         }
     }
 
-    /// Load key from local store
+    /// Load key from local store — decrypted with passkey if PRF available
     pub fn load_from_store(&self) {
         let lang = *self.s.language.read();
         let net = *self.s.current_network.read();
         let i18n = ui_i18n(lang);
         let mut pk_signal = self.s.public_key;
         let mut sk_signal = self.s.secret_key_hidden;
+        let prf_key = self.s.prf_key.read().clone();
 
         log(&i18n.loading_started().to_string());
         let store = new_store(lang);
         
         spawn(async move {
             match store.load().await {
-                Ok(secret) => {
+                Ok(stored_data) => {
+                    let secret = if is_localhost() {
+                        stored_data
+                    } else {
+                        let prf = match &prf_key {
+                            Some(key) => key.clone(),
+                            None => {
+                                log(&i18n.fmt_error(i18n.no_prf_key()));
+                                return;
+                            }
+                        };
+                        match passkey::passkey_decrypt(&stored_data, &prf).await {
+                            Ok(decrypted) => decrypted,
+                            Err(e) => {
+                                log(&i18n.fmt_error(&e));
+                                return;
+                            }
+                        }
+                    };
                     log(&i18n.key_loaded_len(secret.len()));
                     let lgr = StellarLedger::new(net, lang);
                     if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
@@ -231,4 +312,11 @@ impl AppController {
             }
         });
     }
+}
+
+/// Returns true when the app is served from localhost (development).
+fn is_localhost() -> bool {
+    web_sys::window()
+        .and_then(|w| w.location().hostname().ok())
+        .is_some_and(|h| h == "localhost" || h == "127.0.0.1" || h == "::1")
 }

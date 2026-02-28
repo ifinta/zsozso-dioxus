@@ -68,6 +68,12 @@ pub trait UiI18n {
     fn gate_title(&self) -> &'static str;
     fn btn_next(&self) -> &'static str;
 
+    // Passkey authentication
+    fn authenticating(&self) -> &'static str;
+    fn auth_failed(&self) -> &'static str;
+    fn btn_exit(&self) -> &'static str;
+    fn no_prf_key(&self) -> &'static str;
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str;
     fn ping_calling(&self) -> &'static str;

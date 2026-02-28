@@ -1,5 +1,6 @@
 mod local_storage;
 mod indexed_db;
+pub mod passkey;
 pub mod i18n;
 
 pub use self::local_storage::LocalStorageStore;
