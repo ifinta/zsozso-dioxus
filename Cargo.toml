@@ -35,6 +35,9 @@ getrandom = "0.3"
 # === Logging ===
 tracing = "0.1"
 
+# === IndexedDB for secrets ===
+rexie = "0.6"
+
 # === Platform / Web ===
 web-sys = { version = "0.3", features = ["Window", "Storage", "Navigator", "Clipboard"], optional = true }
 wasm-bindgen = { version = "0.2", optional = true }

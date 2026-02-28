@@ -135,10 +135,13 @@ impl AppController {
         
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
             let store = new_store(lang);
-            match store.save(secret.as_str()) {
-                Ok(_) => log(&i18n.save_success().to_string()),
-                Err(e) => log(&i18n.fmt_error(&e)),
-            }
+            let secret = secret.clone();
+            spawn(async move {
+                match store.save(secret.as_str()).await {
+                    Ok(_) => log(&i18n.save_success().to_string()),
+                    Err(e) => log(&i18n.fmt_error(&e)),
+                }
+            });
         } else {
             log(&i18n.nothing_to_save().to_string());
         }
@@ -155,18 +158,20 @@ impl AppController {
         log(&i18n.loading_started().to_string());
         let store = new_store(lang);
         
-        match store.load() {
-            Ok(secret) => {
-                log(&i18n.key_loaded_len(secret.len()));
-                let lgr = StellarLedger::new(net, lang);
-                if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
-                    pk_signal.set(Some(pub_key_str));
-                    sk_signal.set(Some(Zeroizing::new(secret)));
-                    log(&i18n.ui_updated_with_key().to_string());
+        spawn(async move {
+            match store.load().await {
+                Ok(secret) => {
+                    log(&i18n.key_loaded_len(secret.len()));
+                    let lgr = StellarLedger::new(net, lang);
+                    if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
+                        pk_signal.set(Some(pub_key_str));
+                        sk_signal.set(Some(Zeroizing::new(secret)));
+                        log(&i18n.ui_updated_with_key().to_string());
+                    }
                 }
+                Err(e) => log(&i18n.fmt_error(&e)),
             }
-            Err(e) => log(&i18n.fmt_error(&e)),
-        }
+        });
     }
 
     pub fn toggle_language(&self) {

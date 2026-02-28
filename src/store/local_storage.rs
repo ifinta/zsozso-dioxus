@@ -32,14 +32,14 @@ impl LocalStorageStore {
 }
 
 impl Store for LocalStorageStore {
-    fn save(&self, secret: &str) -> Result<(), String> {
+    async fn save(&self, secret: &str) -> Result<(), String> {
         let i18n = store_i18n(self.language);
         let storage = self.local_storage()?;
         storage.set_item(&self.key, secret)
             .map_err(|_| i18n.save_error("Failed to write to localStorage"))
     }
 
-    fn load(&self) -> Result<String, String> {
+    async fn load(&self) -> Result<String, String> {
         let i18n = store_i18n(self.language);
         let storage = self.local_storage()?;
         storage.get_item(&self.key)

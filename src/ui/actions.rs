@@ -3,7 +3,7 @@ use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 
 use super::status::TxStatus;
 
-use crate::store::LocalStorageStore;
+use crate::store::IndexedDbStore;
 
 pub async fn submit_transaction(xdr_to_submit: String, net_env: NetworkEnvironment, lang: Language) -> TxStatus {
     if xdr_to_submit.is_empty() {
@@ -57,6 +57,6 @@ pub fn import_keypair(raw_input: String, net_env: NetworkEnvironment, lang: Lang
         .map(|pub_key_str| (pub_key_str, raw_input))
 }
 
-pub fn new_store(lang: Language) -> LocalStorageStore {
-    LocalStorageStore::new("zsozso", "default_account", lang)
+pub fn new_store(lang: Language) -> IndexedDbStore {
+    IndexedDbStore::new("zsozso", "default_account", lang)
 }
