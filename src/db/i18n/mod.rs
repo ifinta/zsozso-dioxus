@@ -11,6 +11,7 @@ pub trait DbI18n {
     fn write_error(&self, error: &str) -> String;
     fn subscribe_error(&self, error: &str) -> String;
     fn connection_error(&self, error: &str) -> String;
+    fn sea_error(&self, error: &str) -> String;
 }
 
 /// Factory function to get the appropriate DbI18n implementation

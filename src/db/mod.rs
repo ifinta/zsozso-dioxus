@@ -1,8 +1,10 @@
 mod gundb;
+mod sea;
 pub mod i18n;
 
 pub use gundb::GunDb;
 pub use gundb::poll_subscription;
+pub use sea::{GunSea, Sea, SeaKeyPair};
 
 use std::collections::HashMap;
 
