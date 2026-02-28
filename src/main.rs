@@ -1,3 +1,4 @@
+mod db;
 mod i18n;
 mod ledger;
 mod ui;
