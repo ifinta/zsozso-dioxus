@@ -2,7 +2,6 @@ mod gundb;
 pub mod i18n;
 
 pub use gundb::GunDb;
-#[cfg(target_arch = "wasm32")]
 pub use gundb::poll_subscription;
 
 use std::collections::HashMap;

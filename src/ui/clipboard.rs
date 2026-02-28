@@ -1,17 +1,6 @@
 use dioxus::prelude::*;
 
-/// Copy text to clipboard.
-/// On desktop: uses arboard.
-/// On web: uses navigator.clipboard API and marks clipboard as dirty.
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn copy_to_clipboard(text: &str) {
-    if let Ok(mut cb) = arboard::Clipboard::new() {
-        let _ = cb.set_text(text.to_string());
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
+/// Copy text to clipboard using navigator.clipboard API.
 pub fn copy_to_clipboard(text: &str) {
     let text = text.to_string();
     let _ = js_sys::eval("window.__zsozso_clipboard_dirty = true");
@@ -21,14 +10,6 @@ pub fn copy_to_clipboard(text: &str) {
 }
 
 /// Clear the clipboard content.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn clear_clipboard() {
-    if let Ok(mut cb) = arboard::Clipboard::new() {
-        let _ = cb.set_text("".to_string());
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
 pub fn clear_clipboard() {
     let _ = js_sys::eval("window.__zsozso_clipboard_dirty = false");
     spawn(async move {
@@ -36,7 +17,6 @@ pub fn clear_clipboard() {
     });
 }
 
-#[cfg(target_arch = "wasm32")]
 async fn write_to_web_clipboard(text: &str) -> bool {
     use wasm_bindgen_futures::JsFuture;
 
@@ -50,7 +30,6 @@ async fn write_to_web_clipboard(text: &str) -> bool {
 /// when the user closes the tab or navigates away.
 /// Implemented in pure JS (via eval) to minimize overhead during page teardown.
 /// Only clears when the dirty flag is set (i.e., something was copied).
-#[cfg(target_arch = "wasm32")]
 pub fn register_beforeunload_cleanup() {
     let _ = js_sys::eval(r#"
         if (!window.__zsozso_unload_registered) {

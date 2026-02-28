@@ -3,9 +3,6 @@ use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 
 use super::status::TxStatus;
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::store::KeyringStore;
-#[cfg(target_arch = "wasm32")]
 use crate::store::LocalStorageStore;
 
 pub async fn submit_transaction(xdr_to_submit: String, net_env: NetworkEnvironment, lang: Language) -> TxStatus {
@@ -60,12 +57,6 @@ pub fn import_keypair(raw_input: String, net_env: NetworkEnvironment, lang: Lang
         .map(|pub_key_str| (pub_key_str, raw_input))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn new_store(lang: Language) -> KeyringStore {
-    KeyringStore::new("zsozso", "default_account", lang)
-}
-
-#[cfg(target_arch = "wasm32")]
 pub fn new_store(lang: Language) -> LocalStorageStore {
     LocalStorageStore::new("zsozso", "default_account", lang)
 }

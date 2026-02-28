@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["desktop"]
-desktop = ["dioxus/desktop", "dep:arboard", "dep:tokio"]
+default = ["web"]
 web = ["dioxus/web", "dep:web-sys", "dep:wasm-bindgen", "dep:js-sys", "dep:gloo-timers", "dep:wasm-bindgen-futures", "getrandom/wasm_js"]
 
 [dependencies]
@@ -36,19 +35,12 @@ getrandom = "0.3"
 # === Logging ===
 tracing = "0.1"
 
-# === Platform / Desktop (optional) ===
-arboard = { version = "3.4", optional = true }
-tokio = { version = "1", features = ["time", "rt-multi-thread"], optional = true }
-
-# === Platform / Web (optional) ===
+# === Platform / Web ===
 web-sys = { version = "0.3", features = ["Window", "Storage", "Navigator", "Clipboard"], optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
 gloo-timers = { version = "0.3", features = ["futures"], optional = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-keyring = { version = "3.6", features = ["sync-secret-service", "linux-native"] }
 
 [profile.release]
 opt-level = "z"

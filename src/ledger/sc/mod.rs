@@ -144,17 +144,11 @@ pub trait SmartContract {
         let rpc = soroban_rpc(self.network());
         let i18n = sc_i18n(self.language());
 
-        #[cfg(target_arch = "wasm32")]
         web_sys::console::log_1(
             &format!(
                 "[SC] invoke_contract: contract={} fn={} network={:?}",
                 self.contract_id(), function_name, self.network()
             ).into(),
-        );
-        #[cfg(not(target_arch = "wasm32"))]
-        eprintln!(
-            "[SC] invoke_contract: contract={} fn={} network={:?}",
-            self.contract_id(), function_name, self.network()
         );
 
         // 1. Decode caller key
@@ -190,7 +184,6 @@ pub trait SmartContract {
         // 4. Simulate
         let sim = simulate_transaction(&rpc, &unsigned_xdr, &*i18n).await?;
 
-        #[cfg(target_arch = "wasm32")]
         web_sys::console::log_1(
             &format!(
                 "[SC] simulation result: error={:?} min_resource_fee={:?} has_tx_data={} results_count={}",
@@ -199,14 +192,6 @@ pub trait SmartContract {
                 sim.transaction_data.is_some(),
                 sim.results.as_ref().map_or(0, |r| r.len()),
             ).into(),
-        );
-        #[cfg(not(target_arch = "wasm32"))]
-        eprintln!(
-            "[SC] simulation result: error={:?} min_resource_fee={:?} has_tx_data={} results_count={}",
-            sim.error,
-            sim.min_resource_fee,
-            sim.transaction_data.is_some(),
-            sim.results.as_ref().map_or(0, |r| r.len()),
         );
 
         if let Some(ref err) = sim.error {
@@ -291,13 +276,6 @@ fn build_invoke_tx(
     seq_num: i64,
     invoke_args: InvokeContractArgs,
 ) -> Result<Transaction, String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    #[cfg(target_arch = "wasm32")]
     let now = (js_sys::Date::now() / 1000.0) as u64;
 
     Ok(Transaction {
@@ -423,12 +401,9 @@ async fn rpc_call(
 
     let request_json = serde_json::to_string_pretty(&body).unwrap_or_default();
 
-    #[cfg(target_arch = "wasm32")]
     web_sys::console::log_1(
         &format!("[SC RPC] → {} {}\n{}", method, rpc.rpc_url, request_json).into(),
     );
-    #[cfg(not(target_arch = "wasm32"))]
-    eprintln!("[SC RPC] → {} {}\n{}", method, rpc.rpc_url, request_json);
 
     let client = reqwest::Client::new();
     let resp = client
@@ -438,48 +413,33 @@ async fn rpc_call(
         .await
         .map_err(|e| {
             let msg = i18n.rpc_unreachable(&e.to_string());
-            #[cfg(target_arch = "wasm32")]
             web_sys::console::error_1(&format!("[SC RPC] network error: {}", e).into());
-            #[cfg(not(target_arch = "wasm32"))]
-            eprintln!("[SC RPC] network error: {}", e);
             msg
         })?;
 
     let status = resp.status();
     let raw_body = resp.text().await.map_err(|e| {
         let msg = i18n.invalid_response(&e.to_string());
-        #[cfg(target_arch = "wasm32")]
         web_sys::console::error_1(&format!("[SC RPC] body read error: {}", e).into());
-        #[cfg(not(target_arch = "wasm32"))]
-        eprintln!("[SC RPC] body read error: {}", e);
         msg
     })?;
 
-    #[cfg(target_arch = "wasm32")]
     web_sys::console::log_1(
         &format!("[SC RPC] ← {} (HTTP {})\n{}", method, status, raw_body).into(),
     );
-    #[cfg(not(target_arch = "wasm32"))]
-    eprintln!("[SC RPC] ← {} (HTTP {})\n{}", method, status, raw_body);
 
     let rpc_resp: RpcResponse = serde_json::from_str(&raw_body)
         .map_err(|e| {
-            #[cfg(target_arch = "wasm32")]
             web_sys::console::error_1(
                 &format!("[SC RPC] JSON parse error: {}\nraw: {}", e, raw_body).into(),
             );
-            #[cfg(not(target_arch = "wasm32"))]
-            eprintln!("[SC RPC] JSON parse error: {}\nraw: {}", e, raw_body);
             i18n.invalid_response(&e.to_string())
         })?;
 
     if let Some(err) = rpc_resp.error {
-        #[cfg(target_arch = "wasm32")]
         web_sys::console::error_1(
             &format!("[SC RPC] RPC error from {}: {}", method, err.message).into(),
         );
-        #[cfg(not(target_arch = "wasm32"))]
-        eprintln!("[SC RPC] RPC error from {}: {}", method, err.message);
         return Err(i18n.contract_error(&err.message));
     }
 
@@ -497,10 +457,7 @@ async fn fetch_sequence(
 ) -> Result<i64, String> {
     let url = format!("{}/accounts/{}", rpc.horizon_url, public_key);
 
-    #[cfg(target_arch = "wasm32")]
     web_sys::console::log_1(&format!("[SC] fetch_sequence via Horizon: {}", url).into());
-    #[cfg(not(target_arch = "wasm32"))]
-    eprintln!("[SC] fetch_sequence via Horizon: {}", url);
 
     let client = reqwest::Client::new();
     let resp = client
@@ -512,12 +469,9 @@ async fn fetch_sequence(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        #[cfg(target_arch = "wasm32")]
         web_sys::console::error_1(
             &format!("[SC] Horizon error ({}): {}", status, body).into(),
         );
-        #[cfg(not(target_arch = "wasm32"))]
-        eprintln!("[SC] Horizon error ({}): {}", status, body);
         return Err(i18n.invalid_response(&format!("HTTP {}", status)));
     }
 
@@ -591,11 +545,7 @@ async fn poll_transaction(
     Err(i18n.tx_not_found().to_string())
 }
 
-/// Platform-agnostic async sleep helper.
-async fn sleep_ms(_ms: u64) {
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::time::sleep(std::time::Duration::from_millis(_ms)).await;
-
-    #[cfg(target_arch = "wasm32")]
-    gloo_timers::future::TimeoutFuture::new(_ms as u32).await;
+/// Async sleep helper (WASM only).
+async fn sleep_ms(ms: u64) {
+    gloo_timers::future::TimeoutFuture::new(ms as u32).await;
 }

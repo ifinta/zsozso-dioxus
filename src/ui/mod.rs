@@ -15,14 +15,7 @@ pub fn app() -> Element {
     let state = use_wallet_state();
     let ctrl = AppController::new(state);
 
-    // Desktop: clear clipboard when the component is dropped (window closing)
-    #[cfg(not(target_arch = "wasm32"))]
-    use_drop(move || {
-        clipboard::clear_clipboard();
-    });
-
-    // Web: clear clipboard when the tab/browser is closed
-    #[cfg(target_arch = "wasm32")]
+    // Clear clipboard when the tab/browser is closed
     use_hook(|| {
         clipboard::register_beforeunload_cleanup();
     });
@@ -31,7 +24,4 @@ pub fn app() -> Element {
     view::render_app(state, ctrl)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn log(msg: &str) { println!("{}", msg); }
-#[cfg(target_arch = "wasm32")]
 pub fn log(msg: &str) { web_sys::console::log_1(&msg.into()); }
