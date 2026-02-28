@@ -40,10 +40,13 @@ src/
 ├── db/
 │   ├── mod.rs               # Db trait — abstract graph database interface
 │   ├── gundb.rs             # GUN.js bridge (via window.__gun_bridge)
+│   ├── sea.rs               # SEA crypto bridge (via window.__sea_bridge)
 │   └── i18n/                # Database i18n
 ├── store/
 │   ├── mod.rs               # Store trait — abstract secret storage interface
 │   ├── local_storage.rs     # Browser localStorage implementation
+│   ├── indexed_db.rs        # IndexedDB implementation (encrypted secret storage)
+│   ├── passkey.rs           # Passkey/WebAuthn bridge — init, verify, encrypt/decrypt via PRF
 │   └── i18n/
 │       ├── mod.rs           # StoreI18n trait — storage error messages
 │       ├── english.rs       # English implementation
@@ -52,15 +55,31 @@ src/
     ├── mod.rs               # Dioxus UI entry — app() component
     ├── clipboard.rs         # Clipboard — navigator.clipboard API
     ├── actions.rs           # Async UI actions (submit tx, generate keypair, etc.)
-    ├── state.rs             # Reactive wallet state
+    ├── state.rs             # Reactive wallet state (signals)
     ├── controller.rs        # AppController — bridges state ↔ actions
     ├── status.rs            # TxStatus enum
-    ├── view.rs              # Main view layout
-    ├── tabs/                # Tab components (home, info, networking, settings)
+    ├── view.rs              # Main view layout, auth gate, tab bar
+    ├── qr_scanner.rs        # QR scanner — calls wascan JS bridge from Rust/WASM
+    ├── tabs/
+    │   ├── mod.rs           # Tab enum (Home, Networking, Info, Settings)
+    │   ├── home.rs          # Home tab — welcome screen
+    │   ├── networking.rs    # Networking tab — Ping contract, Scan QR code
+    │   ├── info.rs          # Info tab — public key QR code display
+    │   └── settings.rs      # Settings tab — key management, network/language toggle
     └── i18n/
         ├── mod.rs           # UiI18n trait — all UI-facing strings
         ├── english.rs       # English implementation
         └── hungarian.rs     # Hungarian implementation
+
+assets/
+├── gun_bridge.js            # GUN.js ↔ Rust bridge (window.__gun_bridge)
+├── sea_bridge.js            # SEA crypto ↔ Rust bridge (window.__sea_bridge)
+├── passkey_bridge.js        # WebAuthn Passkey + Web Crypto bridge (window.__passkey_bridge)
+├── qr_scanner_bridge.js     # QR scanner bridge using wascan (window.__qr_scanner_bridge)
+├── manifest.json            # PWA manifest
+├── sw.js                    # Service Worker for offline caching
+├── icon-192.png             # PWA icon 192×192
+└── icon-512.png             # PWA icon 512×512
 ```
 
 ### Core Traits
@@ -69,8 +88,20 @@ src/
 |-------|---------|----------------|
 | `Ledger` | Blockchain operations (keygen, signing, submitting) | `StellarLedger` |
 | `SmartContract` | Soroban contract invocation (simulate, sign, send, poll) | `ZsozsoSc` |
-| `Store` | Secure secret persistence | `LocalStorageStore` (browser localStorage) |
+| `Store` | Secure secret persistence | `IndexedDbStore` (encrypted via passkey PRF) |
 | `Db` | Graph database (GUN) | `GunDb` (delegates to gun_bridge.js) |
+| `Sea` | GUN SEA crypto operations | `GunSea` (delegates to sea_bridge.js) |
+
+### JS Bridges
+
+The WASM application communicates with browser-only APIs and external JS libraries through bridge objects on `window`:
+
+| Bridge | JS file | Rust module | Purpose |
+|--------|---------|-------------|---------|
+| `__gun_bridge` | `gun_bridge.js` | `db::gundb` | GUN decentralised database |
+| `__sea_bridge` | `sea_bridge.js` | `db::sea` | GUN SEA crypto (keypair, sign, verify, encrypt, decrypt) |
+| `__passkey_bridge` | `passkey_bridge.js` | `store::passkey` | WebAuthn registration/auth, PRF key derivation, AES-GCM encrypt/decrypt |
+| `__qr_scanner_bridge` | `qr_scanner_bridge.js` | `ui::qr_scanner` | Camera-based QR code scanning via wascan (loaded from CDN) |
 
 ### Internationalization (i18n) Traits
 
