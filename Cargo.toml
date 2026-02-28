@@ -32,6 +32,9 @@ rand = "0.9"
 zeroize = { version = "1.8", features = ["derive"] }
 getrandom = "0.3"
 
+# === QR Code ===
+qrcode = "0.14"
+
 # === Logging ===
 tracing = "0.1"
 

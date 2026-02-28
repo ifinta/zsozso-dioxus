@@ -70,6 +70,10 @@ impl UiI18n for HungarianUi {
     fn btn_exit(&self) -> &'static str { "Kilépés" }
     fn no_prf_key(&self) -> &'static str { "Nincs passkey titkosítási kulcs. Először hitelesítsd magad újra." }
 
+    // Info tab
+    fn info_public_key_label(&self) -> &'static str { "Publikus Kulcsod" }
+    fn info_no_key(&self) -> &'static str { "Nincs betöltött kulcs. Generálj vagy importálj egyet a Beállításokban." }
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str { "\u{1F3D3} Ping" }
     fn ping_calling(&self) -> &'static str { "\u{1F4E1} Szerződés hívása..." }

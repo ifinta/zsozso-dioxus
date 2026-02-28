@@ -70,6 +70,10 @@ impl UiI18n for EnglishUi {
     fn btn_exit(&self) -> &'static str { "Exit now" }
     fn no_prf_key(&self) -> &'static str { "No passkey encryption key available. Re-authenticate first." }
 
+    // Info tab
+    fn info_public_key_label(&self) -> &'static str { "Your Public Key" }
+    fn info_no_key(&self) -> &'static str { "No key loaded. Generate or import one in Settings." }
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str { "\u{1F3D3} Ping" }
     fn ping_calling(&self) -> &'static str { "\u{1F4E1} Calling contract..." }

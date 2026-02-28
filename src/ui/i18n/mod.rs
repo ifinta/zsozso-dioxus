@@ -74,6 +74,10 @@ pub trait UiI18n {
     fn btn_exit(&self) -> &'static str;
     fn no_prf_key(&self) -> &'static str;
 
+    // Info tab
+    fn info_public_key_label(&self) -> &'static str;
+    fn info_no_key(&self) -> &'static str;
+
     // Networking tab / Smart Contract
     fn btn_ping(&self) -> &'static str;
     fn ping_calling(&self) -> &'static str;
