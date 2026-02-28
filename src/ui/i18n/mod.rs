@@ -84,6 +84,12 @@ pub trait UiI18n {
     fn ping_success(&self, msg: &str) -> String;
     fn ping_error(&self, e: &str) -> String;
     fn ping_no_key(&self) -> &'static str;
+
+    // QR Scanner
+    fn btn_scan_qr(&self) -> &'static str;
+    fn scan_scanning(&self) -> &'static str;
+    fn scan_success(&self, key: &str) -> String;
+    fn scan_error(&self, e: &str) -> String;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

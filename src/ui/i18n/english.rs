@@ -80,4 +80,10 @@ impl UiI18n for EnglishUi {
     fn ping_success(&self, msg: &str) -> String { format!("\u{2705} {}", msg) }
     fn ping_error(&self, e: &str) -> String { format!("\u{274C} {}", e) }
     fn ping_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Load a key first (Settings tab)." }
+
+    // QR Scanner
+    fn btn_scan_qr(&self) -> &'static str { "\u{1F4F7} Scan QR" }
+    fn scan_scanning(&self) -> &'static str { "\u{1F4F7} Scanning..." }
+    fn scan_success(&self, key: &str) -> String { format!("\u{2705} Scanned: {}", key) }
+    fn scan_error(&self, e: &str) -> String { format!("\u{274C} Scan failed: {}", e) }
 }

@@ -279,6 +279,33 @@ impl AppController {
         generated_xdr.set(String::new());
     }
 
+    /// Open camera QR scanner and log the scanned public key to the console.
+    pub fn scan_qr_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let mut ping_status = self.s.ping_status;
+
+        ping_status.set(Some(i18n.scan_scanning().to_string()));
+
+        spawn(async move {
+            match super::qr_scanner::scan_qr().await {
+                Ok(key) => {
+                    log(&format!("Scanned public key: {}", key));
+                    let i18n = ui_i18n(lang);
+                    ping_status.set(Some(i18n.scan_success(&key)));
+                }
+                Err(e) => {
+                    if e == "cancelled" {
+                        ping_status.set(None);
+                    } else {
+                        let i18n = ui_i18n(lang);
+                        ping_status.set(Some(i18n.scan_error(&e)));
+                    }
+                }
+            }
+        });
+    }
+
     /// Call the zsozso-sc ping() contract function using the stored secret key
     pub fn ping_contract_action(&self) {
         let lang = *self.s.language.read();

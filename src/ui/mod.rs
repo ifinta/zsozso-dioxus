@@ -6,6 +6,7 @@ pub mod tabs;
 pub mod view;
 pub mod state;
 pub mod controller;
+pub mod qr_scanner;
 
 use dioxus::prelude::*;
 use state::use_wallet_state;
