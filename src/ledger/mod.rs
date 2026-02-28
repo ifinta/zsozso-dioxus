@@ -12,7 +12,7 @@ pub struct KeyPair {
 }
 
 /// Network selector — the Ledger implementation decides what it means
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NetworkEnvironment {
     Production,
     Test,

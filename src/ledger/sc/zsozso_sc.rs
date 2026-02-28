@@ -4,7 +4,7 @@ use super::SmartContract;
 
 /// Deployed contract ID on Stellar testnet.
 /// Replace with the actual contract ID after deployment.
-const ZSOZSO_CONTRACT_ID: &str = "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVBS4";
+const ZSOZSO_CONTRACT_ID: &str = "CCH2DZP5G5CFIWVMA4XZ7VQ4ANHWEL2D6XMFNTCGOBZJXMQCZ7MXQ73Z";
 
 /// zsozso-sc smart contract client.
 /// Mirrors the on-chain `Contract` interface from github.com/ifinta/zsozso-sc.

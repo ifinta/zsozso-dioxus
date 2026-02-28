@@ -26,6 +26,7 @@ use self::i18n::sc_i18n;
 /// Soroban RPC endpoint configuration
 struct SorobanRpcConfig {
     pub rpc_url: &'static str,
+    pub horizon_url: &'static str,
     pub passphrase: &'static str,
 }
 
@@ -33,10 +34,12 @@ fn soroban_rpc(env: NetworkEnvironment) -> SorobanRpcConfig {
     match env {
         NetworkEnvironment::Test => SorobanRpcConfig {
             rpc_url: "https://soroban-testnet.stellar.org",
+            horizon_url: "https://horizon-testnet.stellar.org",
             passphrase: "Test SDF Network ; September 2015",
         },
         NetworkEnvironment::Production => SorobanRpcConfig {
-            rpc_url: "https://soroban-rpc.stellar.org",
+            rpc_url: "https://stellar-soroban-public.nodies.app",
+            horizon_url: "https://horizon.stellar.org",
             passphrase: "Public Global Stellar Network ; September 2015",
         },
     }
@@ -141,6 +144,19 @@ pub trait SmartContract {
         let rpc = soroban_rpc(self.network());
         let i18n = sc_i18n(self.language());
 
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::log_1(
+            &format!(
+                "[SC] invoke_contract: contract={} fn={} network={:?}",
+                self.contract_id(), function_name, self.network()
+            ).into(),
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!(
+            "[SC] invoke_contract: contract={} fn={} network={:?}",
+            self.contract_id(), function_name, self.network()
+        );
+
         // 1. Decode caller key
         let priv_key = match Strkey::from_string(secret_key) {
             Ok(Strkey::PrivateKeyEd25519(pk)) => pk,
@@ -162,11 +178,36 @@ pub trait SmartContract {
             invoke_args,
         )?;
 
-        let unsigned_xdr = unsigned_tx.to_xdr_base64(Limits::none())
+        // Wrap in an envelope (simulateTransaction expects TransactionEnvelope, not bare Transaction)
+        let unsigned_envelope = TransactionEnvelope::Tx(TransactionV1Envelope {
+            tx: unsigned_tx.clone(),
+            signatures: VecM::default(),
+        });
+
+        let unsigned_xdr = unsigned_envelope.to_xdr_base64(Limits::none())
             .map_err(|e| format!("XDR error: {e}"))?;
 
         // 4. Simulate
         let sim = simulate_transaction(&rpc, &unsigned_xdr, &*i18n).await?;
+
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::log_1(
+            &format!(
+                "[SC] simulation result: error={:?} min_resource_fee={:?} has_tx_data={} results_count={}",
+                sim.error,
+                sim.min_resource_fee,
+                sim.transaction_data.is_some(),
+                sim.results.as_ref().map_or(0, |r| r.len()),
+            ).into(),
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!(
+            "[SC] simulation result: error={:?} min_resource_fee={:?} has_tx_data={} results_count={}",
+            sim.error,
+            sim.min_resource_fee,
+            sim.transaction_data.is_some(),
+            sim.results.as_ref().map_or(0, |r| r.len()),
+        );
 
         if let Some(ref err) = sim.error {
             return Err(i18n.simulation_failed(err));
@@ -380,20 +421,65 @@ async fn rpc_call(
         params,
     };
 
+    let request_json = serde_json::to_string_pretty(&body).unwrap_or_default();
+
+    #[cfg(target_arch = "wasm32")]
+    web_sys::console::log_1(
+        &format!("[SC RPC] → {} {}\n{}", method, rpc.rpc_url, request_json).into(),
+    );
+    #[cfg(not(target_arch = "wasm32"))]
+    eprintln!("[SC RPC] → {} {}\n{}", method, rpc.rpc_url, request_json);
+
     let client = reqwest::Client::new();
     let resp = client
         .post(rpc.rpc_url)
         .json(&body)
         .send()
         .await
-        .map_err(|e| i18n.rpc_unreachable(&e.to_string()))?;
+        .map_err(|e| {
+            let msg = i18n.rpc_unreachable(&e.to_string());
+            #[cfg(target_arch = "wasm32")]
+            web_sys::console::error_1(&format!("[SC RPC] network error: {}", e).into());
+            #[cfg(not(target_arch = "wasm32"))]
+            eprintln!("[SC RPC] network error: {}", e);
+            msg
+        })?;
 
-    let rpc_resp: RpcResponse = resp
-        .json()
-        .await
-        .map_err(|e| i18n.invalid_response(&e.to_string()))?;
+    let status = resp.status();
+    let raw_body = resp.text().await.map_err(|e| {
+        let msg = i18n.invalid_response(&e.to_string());
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::error_1(&format!("[SC RPC] body read error: {}", e).into());
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!("[SC RPC] body read error: {}", e);
+        msg
+    })?;
+
+    #[cfg(target_arch = "wasm32")]
+    web_sys::console::log_1(
+        &format!("[SC RPC] ← {} (HTTP {})\n{}", method, status, raw_body).into(),
+    );
+    #[cfg(not(target_arch = "wasm32"))]
+    eprintln!("[SC RPC] ← {} (HTTP {})\n{}", method, status, raw_body);
+
+    let rpc_resp: RpcResponse = serde_json::from_str(&raw_body)
+        .map_err(|e| {
+            #[cfg(target_arch = "wasm32")]
+            web_sys::console::error_1(
+                &format!("[SC RPC] JSON parse error: {}\nraw: {}", e, raw_body).into(),
+            );
+            #[cfg(not(target_arch = "wasm32"))]
+            eprintln!("[SC RPC] JSON parse error: {}\nraw: {}", e, raw_body);
+            i18n.invalid_response(&e.to_string())
+        })?;
 
     if let Some(err) = rpc_resp.error {
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::error_1(
+            &format!("[SC RPC] RPC error from {}: {}", method, err.message).into(),
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!("[SC RPC] RPC error from {}: {}", method, err.message);
         return Err(i18n.contract_error(&err.message));
     }
 
@@ -402,15 +488,42 @@ async fn rpc_call(
         .ok_or_else(|| i18n.invalid_response("null result"))
 }
 
+/// Fetch account sequence number via the Horizon REST API
+/// (Soroban RPC does not expose a `getAccount` method).
 async fn fetch_sequence(
     rpc: &SorobanRpcConfig,
     public_key: &str,
     i18n: &dyn ScI18n,
 ) -> Result<i64, String> {
-    let params = serde_json::json!({ "address": public_key });
-    let result = rpc_call(rpc, "getAccount", params, i18n).await?;
+    let url = format!("{}/accounts/{}", rpc.horizon_url, public_key);
 
-    let acct: GetAccountResult = serde_json::from_value(result)
+    #[cfg(target_arch = "wasm32")]
+    web_sys::console::log_1(&format!("[SC] fetch_sequence via Horizon: {}", url).into());
+    #[cfg(not(target_arch = "wasm32"))]
+    eprintln!("[SC] fetch_sequence via Horizon: {}", url);
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| i18n.rpc_unreachable(&e.to_string()))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        #[cfg(target_arch = "wasm32")]
+        web_sys::console::error_1(
+            &format!("[SC] Horizon error ({}): {}", status, body).into(),
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!("[SC] Horizon error ({}): {}", status, body);
+        return Err(i18n.invalid_response(&format!("HTTP {}", status)));
+    }
+
+    let acct: GetAccountResult = resp
+        .json()
+        .await
         .map_err(|e| i18n.invalid_response(&e.to_string()))?;
 
     acct.sequence

@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v15test1';
+const CACHE_NAME = 'zsozso-v0.15test6';
 
 // We don't use a pre-cache list because Dioxus generates hashed filenames
 // (e.g. zsozso-dxhABC123.js) that change with every build.
