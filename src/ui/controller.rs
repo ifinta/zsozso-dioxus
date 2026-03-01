@@ -256,10 +256,12 @@ impl AppController {
     }
 
     pub fn toggle_language(&self) {
-        let next = if *self.s.language.read() == crate::i18n::Language::English {
-            crate::i18n::Language::Hungarian
-        } else {
-            crate::i18n::Language::English
+        use crate::i18n::Language;
+        let next = match *self.s.language.read() {
+            Language::English => Language::Hungarian,
+            Language::Hungarian => Language::French,
+            Language::French => Language::German,
+            Language::German => Language::English,
         };
         let mut language = self.s.language;
         language.set(next);

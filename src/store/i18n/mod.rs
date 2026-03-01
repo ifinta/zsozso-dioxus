@@ -1,8 +1,12 @@
 mod english;
+mod french;
+mod german;
 mod hungarian;
 
 use crate::i18n::Language;
 use english::EnglishStore;
+use french::FrenchStore;
+use german::GermanStore;
 use hungarian::HungarianStore;
 
 /// Trait for store-related internationalized strings
@@ -16,6 +20,8 @@ pub trait StoreI18n {
 pub fn store_i18n(lang: Language) -> Box<dyn StoreI18n> {
     match lang {
         Language::English => Box::new(EnglishStore),
+        Language::French => Box::new(FrenchStore),
+        Language::German => Box::new(GermanStore),
         Language::Hungarian => Box::new(HungarianStore),
     }
 }

@@ -39,7 +39,12 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             button {
                 style: "{language_btn_style}",
                 onclick: move |_| ctrl.toggle_language(),
-                if lang == Language::English { "Magyar" } else { "English" }
+                match lang {
+                    Language::English => "Magyar",
+                    Language::Hungarian => "Français",
+                    Language::French => "Deutsch",
+                    Language::German => "English",
+                }
             }
         }
 
