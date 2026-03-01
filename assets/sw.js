@@ -13,7 +13,7 @@ function _ts() {
 
 const LOG = (...args) => {
     const text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    const entry = _ts() + ' [SW] ' + text;
+    const entry = _ts() + ' ' + CACHE_NAME + ' [SW] ' + text;
     _swLogBuffer.push(entry);
     if (_swLogBuffer.length > _SW_LOG_MAX) _swLogBuffer.shift();
     console.log(`[SW ${CACHE_NAME}]`, ...args);
@@ -21,7 +21,7 @@ const LOG = (...args) => {
 };
 const ERR = (...args) => {
     const text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    const entry = _ts() + ' [SW ERR] ' + text;
+    const entry = _ts() + ' ' + CACHE_NAME + ' [SW ERR] ' + text;
     _swLogBuffer.push(entry);
     if (_swLogBuffer.length > _SW_LOG_MAX) _swLogBuffer.shift();
     console.error(`[SW ${CACHE_NAME}]`, ...args);
@@ -42,13 +42,14 @@ LOG('Script evaluated');
 // Instead we cache at runtime: files are cached on first load.
 
 self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'GET_LOGS') {
+        event.ports[0].postMessage({ logs: _swLogBuffer.slice() });
+        return;
+    }
     LOG('Message received:', event.data);
     if (event.data && event.data.type === 'GET_VERSION') {
         event.ports[0].postMessage({ version: CACHE_NAME });
         LOG('Replied with version:', CACHE_NAME);
-    }
-    if (event.data && event.data.type === 'GET_LOGS') {
-        event.ports[0].postMessage({ logs: _swLogBuffer.slice() });
     }
 });
 

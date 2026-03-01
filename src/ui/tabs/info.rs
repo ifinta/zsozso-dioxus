@@ -2,50 +2,10 @@ use dioxus::prelude::*;
 use qrcode::{QrCode, render::svg};
 use crate::ui::state::WalletState;
 use crate::ui::i18n::UiI18n;
-
-/// Ask the service worker for its CACHE_NAME via postMessage.
-/// Returns the version string, e.g. "zsozso-v2".
-pub async fn get_sw_version() -> Option<String> {
-    use wasm_bindgen::JsCast;
-    use wasm_bindgen_futures::JsFuture;
-
-    let val = js_sys::eval(r#"
-        (function() {
-            var sw = navigator.serviceWorker && navigator.serviceWorker.controller;
-            if (!sw) return Promise.resolve('');
-            return new Promise(function(resolve) {
-                var ch = new MessageChannel();
-                ch.port1.onmessage = function(e) {
-                    resolve(e.data && e.data.version ? e.data.version : '');
-                };
-                sw.postMessage({ type: 'GET_VERSION' }, [ch.port2]);
-                setTimeout(function() { resolve(''); }, 2000);
-            });
-        })()
-    "#).ok()?;
-    let promise: js_sys::Promise = val.dyn_into().ok()?;
-    let result = JsFuture::from(promise).await.ok()?;
-    let s = result.as_string().unwrap_or_default();
-    if s.is_empty() { None } else { Some(s) }
-}
+use crate::app_version;
 
 pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
-    let mut version = use_signal(|| None::<String>);
-    let mut fetched = use_signal(|| false);
-
-    // Fetch the SW version exactly once
-    if !*fetched.read() {
-        fetched.set(true);
-        spawn(async move {
-            if let Some(v) = get_sw_version().await {
-                version.set(Some(v));
-            }
-        });
-    }
-
-    // Read version into a local clone BEFORE entering rsx! to avoid
-    // holding a Ref guard across the macro (which can deadlock on wasm).
-    let ver_display = version.read().clone();
+    let ver = app_version();
     let pk = s.public_key.read().clone();
 
     match pk {
@@ -61,7 +21,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
                 .unwrap_or_default();
 
             rsx! {
-                if let Some(ref ver) = ver_display {
+                if !ver.is_empty() {
                     p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
                         "Version: {ver}"
                     }
@@ -84,7 +44,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
                 div { style: "text-align: center; margin-top: 60px; color: #888;",
                     p { style: "font-size: 2em;", "ℹ️" }
                     p { "{i18n.info_no_key()}" }
-                    if let Some(ref ver) = ver_display {
+                    if !ver.is_empty() {
                         p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
                             "Version: {ver}"
                         }
