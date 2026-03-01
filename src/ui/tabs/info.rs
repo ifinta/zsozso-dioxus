@@ -32,13 +32,11 @@ pub async fn get_sw_version() -> Option<String> {
 pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
     let mut version = use_signal(|| None::<String>);
 
-    // Fetch the SW version once when the tab renders
-    use_effect(move || {
-        spawn(async move {
-            if let Some(v) = get_sw_version().await {
-                version.set(Some(v));
-            }
-        });
+    // Fetch the SW version once on first render (use_future runs once)
+    let _fetch = use_future(move || async move {
+        if let Some(v) = get_sw_version().await {
+            version.set(Some(v));
+        }
     });
 
     let pk = s.public_key.read().clone();

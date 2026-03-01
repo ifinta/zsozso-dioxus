@@ -1,19 +1,37 @@
 // Cache version — increment on every deploy so the old cache gets cleared
 const CACHE_NAME = 'zsozso-v2';
 
+// ── SW-side log ring buffer (max 100) ──
+const _swLogBuffer = [];
+const _SW_LOG_MAX = 100;
+
+function _ts() {
+    const d = new Date();
+    return d.toLocaleTimeString('en-GB', { hour12: false }) + '.' +
+        String(d.getMilliseconds()).padStart(3, '0');
+}
+
 const LOG = (...args) => {
+    const text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+    const entry = _ts() + ' [SW] ' + text;
+    _swLogBuffer.push(entry);
+    if (_swLogBuffer.length > _SW_LOG_MAX) _swLogBuffer.shift();
     console.log(`[SW ${CACHE_NAME}]`, ...args);
-    _forward('LOG ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    _forward(entry);
 };
 const ERR = (...args) => {
+    const text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+    const entry = _ts() + ' [SW ERR] ' + text;
+    _swLogBuffer.push(entry);
+    if (_swLogBuffer.length > _SW_LOG_MAX) _swLogBuffer.shift();
     console.error(`[SW ${CACHE_NAME}]`, ...args);
-    _forward('ERR ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    _forward(entry);
 };
 
 // Forward log lines to the main page so the in-app Log tab can display them
 function _forward(text) {
     self.clients.matchAll({ type: 'window' }).then(clients => {
-        clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_LOG', text: '[SW] ' + text }));
+        clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_LOG', text: text }));
     });
 }
 
@@ -28,6 +46,9 @@ self.addEventListener('message', event => {
     if (event.data && event.data.type === 'GET_VERSION') {
         event.ports[0].postMessage({ version: CACHE_NAME });
         LOG('Replied with version:', CACHE_NAME);
+    }
+    if (event.data && event.data.type === 'GET_LOGS') {
+        event.ports[0].postMessage({ logs: _swLogBuffer.slice() });
     }
 });
 
