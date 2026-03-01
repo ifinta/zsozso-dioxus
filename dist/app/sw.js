@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.200';
+const CACHE_NAME = 'zsozso-v2';
 
 const LOG = (...args) => console.log(`[SW ${CACHE_NAME}]`, ...args);
 const ERR = (...args) => console.error(`[SW ${CACHE_NAME}]`, ...args);
