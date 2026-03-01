@@ -1,8 +1,21 @@
 // Cache version — increment on every deploy so the old cache gets cleared
 const CACHE_NAME = 'zsozso-v2';
 
-const LOG = (...args) => console.log(`[SW ${CACHE_NAME}]`, ...args);
-const ERR = (...args) => console.error(`[SW ${CACHE_NAME}]`, ...args);
+const LOG = (...args) => {
+    console.log(`[SW ${CACHE_NAME}]`, ...args);
+    _forward('LOG ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+};
+const ERR = (...args) => {
+    console.error(`[SW ${CACHE_NAME}]`, ...args);
+    _forward('ERR ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+};
+
+// Forward log lines to the main page so the in-app Log tab can display them
+function _forward(text) {
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+        clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_LOG', text: '[SW] ' + text }));
+    });
+}
 
 LOG('Script evaluated');
 

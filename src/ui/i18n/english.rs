@@ -86,4 +86,9 @@ impl UiI18n for EnglishUi {
     fn scan_scanning(&self) -> &'static str { "\u{1F4F7} Scanning..." }
     fn scan_success(&self, key: &str) -> String { format!("\u{2705} Scanned: {}", key) }
     fn scan_error(&self, e: &str) -> String { format!("\u{274C} Scan failed: {}", e) }
+
+    // Log tab
+    fn tab_log(&self) -> &'static str { "Log" }
+    fn log_refresh(&self) -> &'static str { "\u{1F504} Refresh" }
+    fn log_clear(&self) -> &'static str { "\u{1F5D1} Clear" }
 }

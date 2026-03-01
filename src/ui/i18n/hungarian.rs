@@ -86,4 +86,9 @@ impl UiI18n for HungarianUi {
     fn scan_scanning(&self) -> &'static str { "\u{1F4F7} Szkennelés..." }
     fn scan_success(&self, key: &str) -> String { format!("\u{2705} Beolvasva: {}", key) }
     fn scan_error(&self, e: &str) -> String { format!("\u{274C} Szkennelés sikertelen: {}", e) }
+
+    // Log tab
+    fn tab_log(&self) -> &'static str { "Napló" }
+    fn log_refresh(&self) -> &'static str { "\u{1F504} Frissítés" }
+    fn log_clear(&self) -> &'static str { "\u{1F5D1} Törlés" }
 }

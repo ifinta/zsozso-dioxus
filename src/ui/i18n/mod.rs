@@ -90,6 +90,11 @@ pub trait UiI18n {
     fn scan_scanning(&self) -> &'static str;
     fn scan_success(&self, key: &str) -> String;
     fn scan_error(&self, e: &str) -> String;
+
+    // Log tab
+    fn tab_log(&self) -> &'static str;
+    fn log_refresh(&self) -> &'static str;
+    fn log_clear(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation
