@@ -31,14 +31,21 @@ pub async fn get_sw_version() -> Option<String> {
 
 pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
     let mut version = use_signal(|| None::<String>);
+    let mut fetched = use_signal(|| false);
 
-    // Fetch the SW version once on first render (use_future runs once)
-    let _fetch = use_future(move || async move {
-        if let Some(v) = get_sw_version().await {
-            version.set(Some(v));
-        }
-    });
+    // Fetch the SW version exactly once
+    if !*fetched.read() {
+        fetched.set(true);
+        spawn(async move {
+            if let Some(v) = get_sw_version().await {
+                version.set(Some(v));
+            }
+        });
+    }
 
+    // Read version into a local clone BEFORE entering rsx! to avoid
+    // holding a Ref guard across the macro (which can deadlock on wasm).
+    let ver_display = version.read().clone();
     let pk = s.public_key.read().clone();
 
     match pk {
@@ -54,7 +61,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
                 .unwrap_or_default();
 
             rsx! {
-                if let Some(ver) = version.read().as_ref() {
+                if let Some(ref ver) = ver_display {
                     p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
                         "Version: {ver}"
                     }
@@ -77,7 +84,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
                 div { style: "text-align: center; margin-top: 60px; color: #888;",
                     p { style: "font-size: 2em;", "ℹ️" }
                     p { "{i18n.info_no_key()}" }
-                    if let Some(ver) = version.read().as_ref() {
+                    if let Some(ref ver) = ver_display {
                         p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
                             "Version: {ver}"
                         }
