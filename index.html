@@ -33,10 +33,19 @@
 <body>
     <div id="main"></div>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration with auto-reload on update -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').then(function(reg) {
+                // When a new SW is found and installed, it posts __ZSOZSO_SW_UPDATED.
+                // Reload the page so the new version takes effect.
+                navigator.serviceWorker.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === '__ZSOZSO_SW_UPDATED') {
+                        console.log('[App] New service worker activated, reloading...');
+                        window.location.reload();
+                    }
+                });
+            });
         }
     </script>
 </body>

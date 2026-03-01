@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.195-';
+const CACHE_NAME = 'zsozso-v0.196-';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
@@ -74,6 +74,12 @@ self.addEventListener('activate', event => {
         }).then(() => {
             LOG('Old caches deleted, calling clients.claim()');
             return self.clients.claim();
+        }).then(() => {
+            // Notify all open windows to reload so they pick up the new version
+            return self.clients.matchAll({ type: 'window' });
+        }).then(clients => {
+            clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_UPDATED' }));
+            LOG('Notified', clients.length, 'client(s) to reload');
         })
     );
 });
@@ -115,7 +121,12 @@ self.addEventListener('fetch', event => {
     // Hashed assets (.js, .wasm) → cache-first
     // Their content never changes (guaranteed by the hash), so
     // it's enough to download once and always serve from cache afterwards.
-    const isCacheableAsset = /\.(js|wasm|css|png|jpg|svg|ico|woff2?)$/.test(url.pathname);
+    // IMPORTANT: exclude sw.js itself — the browser must always fetch it
+    // fresh so it can detect updates and trigger the install event.
+    const isCacheableAsset =
+        /\.(js|wasm|css|png|jpg|svg|ico|woff2?)$/.test(url.pathname) &&
+        !url.pathname.endsWith('/sw.js') &&
+        !url.pathname.endsWith('/log_bridge.js');
 
     if (isCacheableAsset) {
         event.respondWith(
