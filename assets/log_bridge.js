@@ -95,7 +95,25 @@
         get: function() { return buffer.join('\n'); },
         // Returns the current count
         count: function() { return buffer.length; },
-        // Clear the buffer
-        clear: function() { buffer.length = 0; seenSwLines.clear(); },
+        // Clear both local buffer and the SW-side buffer
+        clear: function() {
+            buffer.length = 0;
+            seenSwLines.clear();
+            // Tell the service worker to clear its buffer too
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                try {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_LOGS' });
+                } catch(_) {}
+            }
+        },
+        // Extract the version (CACHE_NAME) from SW log lines.
+        // SW log entries contain the CACHE_NAME string, e.g. "12:34:56.789 zsozso-v2 [SW] ..."
+        version: function() {
+            for (var i = 0; i < buffer.length; i++) {
+                var m = buffer[i].match(/\b(zsozso-v[\w.]+)\b/);
+                if (m) return m[1];
+            }
+            return '';
+        },
     };
 })();

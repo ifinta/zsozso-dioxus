@@ -41,14 +41,14 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
         }
         None => {
             rsx! {
+                if !ver.is_empty() {
+                    p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
+                        "Version: {ver}"
+                    }
+                }
                 div { style: "text-align: center; margin-top: 60px; color: #888;",
                     p { style: "font-size: 2em;", "ℹ️" }
                     p { "{i18n.info_no_key()}" }
-                    if !ver.is_empty() {
-                        p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
-                            "Version: {ver}"
-                        }
-                    }
                 }
             }
         }

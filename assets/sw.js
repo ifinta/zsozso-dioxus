@@ -46,6 +46,10 @@ self.addEventListener('message', event => {
         event.ports[0].postMessage({ logs: _swLogBuffer.slice() });
         return;
     }
+    if (event.data && event.data.type === 'CLEAR_LOGS') {
+        _swLogBuffer.length = 0;
+        return;
+    }
     LOG('Message received:', event.data);
     if (event.data && event.data.type === 'GET_VERSION') {
         event.ports[0].postMessage({ version: CACHE_NAME });

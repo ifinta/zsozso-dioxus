@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.194';
+const CACHE_NAME = 'zsozso-v0.195-';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
@@ -44,6 +44,10 @@ LOG('Script evaluated');
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'GET_LOGS') {
         event.ports[0].postMessage({ logs: _swLogBuffer.slice() });
+        return;
+    }
+    if (event.data && event.data.type === 'CLEAR_LOGS') {
+        _swLogBuffer.length = 0;
         return;
     }
     LOG('Message received:', event.data);
