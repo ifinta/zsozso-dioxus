@@ -1,19 +1,17 @@
 # todo:
 
 ## simple steps:
-- Join az expo-ból (a ping meghívása a Ledger okos bővítése után)
-- A verzió jelenjen meg a UI-n valahol.
-- Password vagy PIN code, Passkey bizonyos lapok elérésére (betöltés, settings, ...)
+- setup a gun server
+- debug gundb and aes implementation
+- understand and debug the sw.js . target to find the PWA App refreshing issue:
+- The status not changing - partially - if I change the language and we are in an async function
 
 ## known issues:
 #### (not yet solved, but it isn't mandant to correct it):
-- Nem frissül iOS-en a Home Screen-re mentett App automatikusan, vagy nem jól csináltam valamit (?)
-- A clipboard törlés a secret-re még nem megy, bár jól néz ki a kódban...
-- A státusz részben nem javul, ha váltok nyelvet.
 
 ## bigger steps:
-- Trait a futtatási környezet meghatározására, mint a nyelv, de nem nyomógombos választással, hanem kérdezze le, tárolja el, és mindenhol innen kérje le. Main szintjén, és a main-ban határozódjon meg, mentődjön el.
-- ikonok, grafika feljavítása
+- a good graphics design (styles...?)
+- RWA Page (and logic)
 
 # for dev's:
 #### (rarely updated - we are at the beginning):
@@ -165,26 +163,31 @@ npx serve target/dx/zsozso/release/web/public/ -l 8080
 ```
 ## Deployment
 
-```bash
-# /var/www/html/app/
-# ├── index.html (from build output)
-# ├── sw.js (from assets/ or from project root)
-# ├── manifest.json (from assets/ or from project root)
-# ├── icon-192.png (from assets/ or from project root)
-# ├── icon-512.png (from assets/ or from project root)
-# └── assets/
-#     ├── zsozso-dxh*.js (from build output)
-#     └── zsozso_bg-dxh*.wasm (from build output)
+```
+/var/www/html/app/
+├── index.html (from build output)
+├── sw.js (from assets/ or from project root)
+├── manifest.json (from assets/ or from project root)
+├── icon-192.png (from assets/ or from project root)
+├── icon-512.png (from assets/ or from project root)
+├── <... other files ...> (from assets/ or from project root)
+└── assets/
+    ├── zsozso-dxh*.js (from build output)
+    └── zsozso_bg-dxh*.wasm (from build output)
 
-# A change of the CACHE_NAME in the sw.js at every deploy a need 
-# (the browser will reread the cache at the user...):
+A change of the CACHE_NAME in the sw.js at every deploy a need 
+(the browser will reread the cache at the user...):
+...
 const CACHE_NAME = 'zsozso-v2'; => 'zsozso-v3' ...
+...
+```
 
+```bash
 # I use an intermediate directory to collect the deployment files in dist/app
 # Later it is possible to use python or npx to serve the pages from dist/
 npx serve dist/ -l 8080
 
-# From the browser then the app is reachable with this link: http://localhost:8080/app/
+# After the launch the App is reachable with this link: http://localhost:8080/app/ in a browser 
 ```
 
 ### Feature Flag
