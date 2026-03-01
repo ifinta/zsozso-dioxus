@@ -70,16 +70,24 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys => {
             const old = keys.filter(k => k !== CACHE_NAME);
             LOG('Existing caches:', keys, '| Deleting:', old);
-            return Promise.all(old.map(k => caches.delete(k)));
-        }).then(() => {
+            // Track whether this is a genuine update (old caches exist)
+            const isUpdate = old.length > 0;
+            return Promise.all(old.map(k => caches.delete(k))).then(() => isUpdate);
+        }).then(isUpdate => {
             LOG('Old caches deleted, calling clients.claim()');
-            return self.clients.claim();
-        }).then(() => {
-            // Notify all open windows to reload so they pick up the new version
-            return self.clients.matchAll({ type: 'window' });
-        }).then(clients => {
-            clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_UPDATED' }));
-            LOG('Notified', clients.length, 'client(s) to reload');
+            return self.clients.claim().then(() => isUpdate);
+        }).then(isUpdate => {
+            // Only notify clients to reload when we actually replaced an older version.
+            // On iOS the SW can be terminated and re-activated by the OS —
+            // that is NOT an update and must not trigger a reload loop.
+            if (isUpdate) {
+                return self.clients.matchAll({ type: 'window' }).then(clients => {
+                    clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_UPDATED' }));
+                    LOG('Update detected — notified', clients.length, 'client(s) to reload');
+                });
+            } else {
+                LOG('No old caches found — not an update, skipping reload notification');
+            }
         })
     );
 });

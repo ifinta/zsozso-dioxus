@@ -81,18 +81,24 @@
         } catch(_) {}
     }
 
-    // Pull once the SW is ready, then every 3 seconds
+    // Pull once the SW is ready. Don't poll on an interval —
+    // iOS Safari kills the SW after ~30s of inactivity, and constant
+    // polling would either keep it alive unnecessarily or fail silently.
+    // Instead, pull on demand when the Log tab reads the buffer.
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(function() {
             pullSwLogs();
-            setInterval(pullSwLogs, 3000);
         });
     }
 
     // Public API for Rust to read
     window.__zsozso_log = {
-        // Returns all buffered lines as a single newline-separated string
-        get: function() { return buffer.join('\n'); },
+        // Returns all buffered lines as a single newline-separated string.
+        // Also triggers a pull from the SW so next read has fresh data.
+        get: function() {
+            pullSwLogs();
+            return buffer.join('\n');
+        },
         // Returns the current count
         count: function() { return buffer.length; },
         // Clear both local buffer and the SW-side buffer

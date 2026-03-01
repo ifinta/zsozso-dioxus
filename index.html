@@ -37,12 +37,21 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(function(reg) {
-                // When a new SW is found and installed, it posts __ZSOZSO_SW_UPDATED.
-                // Reload the page so the new version takes effect.
+                // When a genuine update is detected (old caches replaced),
+                // the SW posts __ZSOZSO_SW_UPDATED. Reload once to pick up the new version.
+                // Guard against reload loops with a timestamp check.
                 navigator.serviceWorker.addEventListener('message', function(event) {
                     if (event.data && event.data.type === '__ZSOZSO_SW_UPDATED') {
-                        console.log('[App] New service worker activated, reloading...');
-                        window.location.reload();
+                        var lastReload = parseInt(sessionStorage.getItem('__zsozso_reload_ts') || '0', 10);
+                        var now = Date.now();
+                        // Don't reload more than once per 10 seconds
+                        if (now - lastReload > 10000) {
+                            sessionStorage.setItem('__zsozso_reload_ts', String(now));
+                            console.log('[App] New service worker version detected, reloading...');
+                            window.location.reload();
+                        } else {
+                            console.log('[App] Ignoring SW update reload (too recent)');
+                        }
                     }
                 });
             });
