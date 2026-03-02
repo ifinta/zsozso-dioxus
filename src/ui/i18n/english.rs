@@ -91,6 +91,11 @@ impl UiI18n for EnglishUi {
     fn tab_log(&self) -> &'static str { "Log" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Refresh" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Clear" }
+    fn log_upload(&self) -> &'static str { "\u{2B06}\u{FE0F} Upload" }
+    fn log_uploading(&self) -> &'static str { "Uploading..." }
+    fn log_upload_ok(&self) -> &'static str { "\u{2705} Log uploaded" }
+    fn log_upload_fail(&self, e: &str) -> String { format!("\u{274C} Upload failed: {}", e) }
+    fn log_upload_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} Log is empty" }
 
     // Update toast
     fn toast_update_available(&self) -> &'static str { "\u{1F680} A new version of Zsozso is available!" }

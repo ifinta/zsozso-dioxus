@@ -91,6 +91,22 @@
         });
     }
 
+    // Upload logs to the server (POST /app/upload_log)
+    function uploadLogs() {
+        if (buffer.length === 0) return Promise.resolve('EMPTY');
+        var body = buffer.join('\n');
+        return fetch('/app/upload_log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            body: body
+        }).then(function(resp) {
+            if (resp.ok) return 'OK';
+            return 'HTTP_' + resp.status;
+        }).catch(function(err) {
+            return 'ERR:' + (err.message || err);
+        });
+    }
+
     // Public API for Rust to read
     window.__zsozso_log = {
         // Returns all buffered lines as a single newline-separated string.
@@ -111,6 +127,11 @@
                     navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_LOGS' });
                 } catch(_) {}
             }
+        },
+        // Upload the current log buffer to the server.
+        // Returns a Promise that resolves to 'OK', 'EMPTY', or an error string.
+        upload: function() {
+            return uploadLogs();
         },
         // Extract the version (CACHE_NAME) from SW log lines.
         // SW log entries contain the CACHE_NAME string, e.g. "12:34:56.789 zsozso-v2 [SW] ..."

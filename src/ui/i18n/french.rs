@@ -91,6 +91,11 @@ impl UiI18n for FrenchUi {
     fn tab_log(&self) -> &'static str { "Journal" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Rafraîchir" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Effacer" }
+    fn log_upload(&self) -> &'static str { "\u{2B06}\u{FE0F} Envoyer" }
+    fn log_uploading(&self) -> &'static str { "Envoi en cours..." }
+    fn log_upload_ok(&self) -> &'static str { "\u{2705} Journal envoyé" }
+    fn log_upload_fail(&self, e: &str) -> String { format!("\u{274C} Échec de l'envoi\u{00A0}: {}", e) }
+    fn log_upload_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} Le journal est vide" }
 
     // Update toast
     fn toast_update_available(&self) -> &'static str { "\u{1F680} Une nouvelle version de Zsozso est disponible\u{00A0}!" }

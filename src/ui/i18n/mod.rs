@@ -101,6 +101,11 @@ pub trait UiI18n {
     fn tab_log(&self) -> &'static str;
     fn log_refresh(&self) -> &'static str;
     fn log_clear(&self) -> &'static str;
+    fn log_upload(&self) -> &'static str;
+    fn log_uploading(&self) -> &'static str;
+    fn log_upload_ok(&self) -> &'static str;
+    fn log_upload_fail(&self, e: &str) -> String;
+    fn log_upload_empty(&self) -> &'static str;
 
     // Update toast
     fn toast_update_available(&self) -> &'static str;
