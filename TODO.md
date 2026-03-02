@@ -2,15 +2,14 @@
 
 ## simple steps:
 - setup a gun server
-- debug gundb and aes implementation
-- understand and debug the sw.js . target to find the PWA App refreshing issue
+- debug gundb and aes implementation (key from stellar secret)
 
 ## known issues:
 #### (not yet solved, but it isn't mandant to correct it):
 - The status not changing - partially - if I change the language and we are in an async function
 
 ## bigger steps:
-- a good graphics design (styles...?)
+- a good graphics design (styles...(learn it) use components!)
 - RWA Page (and logic)
 
 # for dev's:
