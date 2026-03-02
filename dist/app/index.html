@@ -46,19 +46,33 @@
                 }
             });
 
-            // 2. Register the worker
-            navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' })
-                .then(function(reg) {
-                    console.log('[App] SW registered');
-                    // Force a check for updates every time the page is opened
-                    reg.update();
+            // 2. Deregister any existing SW first, wait for OS/browser to
+            //    release the file lock, then register the fresh SW.
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                var chain = Promise.resolve();
+                regs.forEach(function(reg) {
+                    console.log('[App] Unregistering old SW, scope:', reg.scope);
+                    chain = chain.then(function() { return reg.unregister(); });
                 });
+                return chain;
+            }).then(function() {
+                // Give the browser/OS 1 second to fully release the sw.js file
+                return new Promise(function(resolve) { setTimeout(resolve, 1000); });
+            }).then(function() {
+                return navigator.serviceWorker.register('/app/sw.js', {
+                    scope: '/app/',
+                    updateViaCache: 'none'   // never use HTTP cache for sw.js
+                });
+            }).then(function(reg) {
+                console.log('[App] SW registered (fresh)');
+                reg.update();
+            });
 
-            // // 3. Optional: Native "controllerchange" is more reliable than postMessage
-            // navigator.serviceWorker.addEventListener('controllerchange', function() {
-            //     // This fires when the new SW takes over.
-            //     // If you want an even faster refresh, trigger reload here too.
-            // });
+            // 3. Reload when the new SW takes control (most reliable update signal)
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                console.log('[App] New SW took control — reloading');
+                window.location.reload();
+            });
         }
     </script>
 <script type="module" async src="/app/assets/zsozso-dxhf1a4dafac7a8d86.js"></script>
