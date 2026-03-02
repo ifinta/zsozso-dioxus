@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.1994-';
+const CACHE_NAME = 'zsozso-v0.1995-';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
@@ -65,6 +65,10 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
     LOG('Activate event — cleaning old caches');
+    // 1. Claim clients IMMEDIATELY
+    event.waitUntil(self.clients.claim());
+
+    // 2. Then proceed with cleanup and notifications
     // Delete old cache versions
     event.waitUntil(
         caches.keys().then(keys => {
@@ -139,21 +143,18 @@ self.addEventListener('fetch', event => {
     if (isCacheableAsset) {
         event.respondWith(
             caches.match(event.request).then(cached => {
-                if (cached) {
-                    LOG('ASSET cache-hit:', url.pathname);
-                    return cached;
-                }
-                LOG('ASSET cache-miss, fetching:', url.pathname);
+                if (cached) return cached;
+
+                // Not in cache, try network
                 return fetch(event.request).then(response => {
-                    LOG('ASSET network response:', response.status, url.pathname);
                     if (response.status === 200) {
                         const clone = response.clone();
                         caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
                     }
                     return response;
                 }).catch(err => {
-                    ERR('ASSET fetch failed:', err.message || err, url.pathname);
-                    throw err;
+                    // If network fails, try ANY cache version before giving up
+                    return caches.match(event.request);
                 });
             })
         );
