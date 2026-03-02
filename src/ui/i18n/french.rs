@@ -91,4 +91,11 @@ impl UiI18n for FrenchUi {
     fn tab_log(&self) -> &'static str { "Journal" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Rafraîchir" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Effacer" }
+
+    // Update toast
+    fn toast_update_available(&self) -> &'static str { "\u{1F680} Une nouvelle version de Zsozso est disponible\u{00A0}!" }
+    fn btn_update_now(&self) -> &'static str { "Mettre à jour" }
+
+    // Info tab – version
+    fn info_version(&self, ver: &str) -> String { format!("Version\u{00A0}: {}", ver) }
 }

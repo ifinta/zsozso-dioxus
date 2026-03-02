@@ -91,4 +91,11 @@ impl UiI18n for HungarianUi {
     fn tab_log(&self) -> &'static str { "Napló" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Frissítés" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Törlés" }
+
+    // Update toast
+    fn toast_update_available(&self) -> &'static str { "\u{1F680} A Zsozso új verziója elérhető!" }
+    fn btn_update_now(&self) -> &'static str { "Frissítés most" }
+
+    // Info tab – version
+    fn info_version(&self, ver: &str) -> String { format!("Verzió: {}", ver) }
 }

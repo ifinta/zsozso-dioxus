@@ -101,6 +101,13 @@ pub trait UiI18n {
     fn tab_log(&self) -> &'static str;
     fn log_refresh(&self) -> &'static str;
     fn log_clear(&self) -> &'static str;
+
+    // Update toast
+    fn toast_update_available(&self) -> &'static str;
+    fn btn_update_now(&self) -> &'static str;
+
+    // Info tab – version
+    fn info_version(&self, ver: &str) -> String;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

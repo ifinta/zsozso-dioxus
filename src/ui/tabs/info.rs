@@ -23,7 +23,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
             rsx! {
                 if !ver.is_empty() {
                     p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
-                        "Version: {ver}"
+                        "{i18n.info_version(ver)}"
                     }
                 }
                 div { style: "text-align: center; margin-top: 30px;",
@@ -43,7 +43,7 @@ pub fn render_info_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
             rsx! {
                 if !ver.is_empty() {
                     p { style: "margin-top: 12px; font-size: 0.7em; color: #999;",
-                        "Version: {ver}"
+                        "{i18n.info_version(ver)}"
                     }
                 }
                 div { style: "text-align: center; margin-top: 60px; color: #888;",
