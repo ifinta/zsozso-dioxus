@@ -2,12 +2,14 @@ mod english;
 mod french;
 mod german;
 mod hungarian;
+mod spanish;
 
 use crate::i18n::Language;
 use english::EnglishLedger;
 use french::FrenchLedger;
 use german::GermanLedger;
 use hungarian::HungarianLedger;
+use spanish::SpanishLedger;
 
 /// Trait for ledger-related internationalized strings
 pub trait LedgerI18n {
@@ -32,5 +34,6 @@ pub fn ledger_i18n(lang: Language) -> Box<dyn LedgerI18n> {
         Language::French => Box::new(FrenchLedger),
         Language::German => Box::new(GermanLedger),
         Language::Hungarian => Box::new(HungarianLedger),
+        Language::Spanish => Box::new(SpanishLedger),
     }
 }

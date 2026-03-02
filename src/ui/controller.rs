@@ -261,6 +261,7 @@ impl AppController {
             "hu" => Language::Hungarian,
             "fr" => Language::French,
             "de" => Language::German,
+            "es" => Language::Spanish,
             _ => Language::English,
         };
         let mut language = self.s.language;

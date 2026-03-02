@@ -32,6 +32,7 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
         Language::Hungarian => "hu",
         Language::French => "fr",
         Language::German => "de",
+        Language::Spanish => "es",
     };
 
     rsx! {
@@ -50,6 +51,7 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
                 option { value: "hu", selected: lang == Language::Hungarian, "Magyar" }
                 option { value: "fr", selected: lang == Language::French, "Français" }
                 option { value: "de", selected: lang == Language::German, "Deutsch" }
+                option { value: "es", selected: lang == Language::Spanish, "Español" }
             }
         }
 

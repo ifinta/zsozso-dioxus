@@ -5,4 +5,5 @@ pub enum Language {
     Hungarian,
     French,
     German,
+    Spanish,
 }
