@@ -1,5 +1,5 @@
 // Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.1997-';
+const CACHE_NAME = 'zsozso-v0.1998-';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
