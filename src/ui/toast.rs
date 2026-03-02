@@ -42,8 +42,8 @@ pub fn UpdateNotification() -> Element {
 
     rsx! {
         div {
-            class: "fixed bottom-4 right-4 bg-info text-white p-4 rounded-lg shadow-lg flex flex-col gap-2",
-            style: "background-color: #17a2b8; z-index: 9999; min-width: 250px;",
+            class: "fixed bottom-4 right-4 bg-info text-white p-4 rounded-lg shadow-lg flex flex-col gap-2 z-50",
+            style: "background-color: #17a2b8; min-width: 250px;",
             p { "{i18n.toast_update_available()}" }
             button {
                 class: "bg-white text-info font-bold py-1 px-3 rounded hover:bg-gray-100",
