@@ -7,10 +7,12 @@ pub mod view;
 pub mod state;
 pub mod controller;
 pub mod qr_scanner;
+pub mod toast;
 
 use dioxus::prelude::*;
 use state::use_wallet_state;
 use controller::AppController;
+use toast::UpdateNotification;
 
 pub fn app() -> Element {
     let state = use_wallet_state();
@@ -21,8 +23,10 @@ pub fn app() -> Element {
         clipboard::register_beforeunload_cleanup();
     });
 
-    // Pass the controller and state to the view
-    view::render_app(state, ctrl)
+    rsx! {
+        {view::render_app(state, ctrl)}
+        UpdateNotification {}
+    }
 }
 
 pub fn log(msg: &str) { web_sys::console::log_1(&msg.into()); }

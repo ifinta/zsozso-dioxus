@@ -115,11 +115,12 @@
         // Extract the version (CACHE_NAME) from SW log lines.
         // SW log entries contain the CACHE_NAME string, e.g. "12:34:56.789 zsozso-v2 [SW] ..."
         version: function() {
-            for (var i = 0; i < buffer.length; i++) {
+            // Fallback: check the logs as you do now
+            for (var i = buffer.length - 1; i >= 0; i--) { // Check newest first
                 var m = buffer[i].match(/\b(zsozso-v[\w.]+)\b/);
                 if (m) return m[1];
             }
-            return '';
-        },
+            return 'detecting...'; 
+        }
     };
 })();
