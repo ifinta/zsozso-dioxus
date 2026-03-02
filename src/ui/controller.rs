@@ -255,16 +255,16 @@ impl AppController {
         });
     }
 
-    pub fn toggle_language(&self) {
+    pub fn set_language(&self, code: &str) {
         use crate::i18n::Language;
-        let next = match *self.s.language.read() {
-            Language::English => Language::Hungarian,
-            Language::Hungarian => Language::French,
-            Language::French => Language::German,
-            Language::German => Language::English,
+        let lang = match code {
+            "hu" => Language::Hungarian,
+            "fr" => Language::French,
+            "de" => Language::German,
+            _ => Language::English,
         };
         let mut language = self.s.language;
-        language.set(next);
+        language.set(lang);
     }
 
     pub fn toggle_network(&self) {

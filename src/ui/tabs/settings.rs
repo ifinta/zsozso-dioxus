@@ -25,26 +25,31 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
         "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: {};",
         if !is_production { "#dc3545" } else { "#17a2b8" }
     );
-    let language_btn_style = "padding: 8px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #17a2b8;";
     let networork_btn_label = if !is_production { i18n.net_testnet_label() } else { i18n.net_mainnet_label() };
+
+    let lang_value = match lang {
+        Language::English => "en",
+        Language::Hungarian => "hu",
+        Language::French => "fr",
+        Language::German => "de",
+    };
 
     rsx! {
         // Header: Network & Language
-        div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
+        div { style: "display: flex; gap: 10px; margin-bottom: 20px; align-items: center;",
             button {
                 style: "{network_btn_style}",
                 onclick: move |_| ctrl.toggle_network(),
                 "{networork_btn_label}"
             }
-            button {
-                style: "{language_btn_style}",
-                onclick: move |_| ctrl.toggle_language(),
-                match lang {
-                    Language::English => "Magyar",
-                    Language::Hungarian => "Français",
-                    Language::French => "Deutsch",
-                    Language::German => "English",
-                }
+            select {
+                style: "padding: 8px 12px; border: 1px solid #17a2b8; border-radius: 4px; font-weight: bold; cursor: pointer; color: #17a2b8; background: white; font-size: 0.95em;",
+                value: "{lang_value}",
+                onchange: move |evt| ctrl.set_language(&evt.value()),
+                option { value: "en", selected: lang == Language::English, "English" }
+                option { value: "hu", selected: lang == Language::Hungarian, "Magyar" }
+                option { value: "fr", selected: lang == Language::French, "Français" }
+                option { value: "de", selected: lang == Language::German, "Deutsch" }
             }
         }
 
