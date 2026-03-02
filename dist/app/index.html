@@ -36,42 +36,37 @@
     <!-- Service Worker Registration with auto-reload on update -->
     <script>
         if ('serviceWorker' in navigator) {
+            var _swRefreshing = false;
+
             // 1. Listen for update signal from the SW
             navigator.serviceWorker.addEventListener('message', function(event) {
                 if (event.data?.type === '__ZSOZSO_SW_UPDATED') {
-                    // Signal to the Rust app that an update is ready
                     window.__ZSOZSO_UPDATE_READY = true;
-                    // Also dispatch a custom event for real-time reactivity
                     window.dispatchEvent(new CustomEvent('zsozso_update_available'));
                 }
             });
 
-            // 2. Deregister any existing SW first, wait for OS/browser to
-            //    release the file lock, then register the fresh SW.
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                var chain = Promise.resolve();
-                regs.forEach(function(reg) {
-                    console.log('[App] Unregistering old SW, scope:', reg.scope);
-                    chain = chain.then(function() { return reg.unregister(); });
-                });
-                return chain;
-            }).then(function() {
-                // Give the browser/OS 1 second to fully release the sw.js file
-                return new Promise(function(resolve) { setTimeout(resolve, 1000); });
-            }).then(function() {
-                return navigator.serviceWorker.register('/app/sw.js', {
-                    scope: '/app/',
-                    updateViaCache: 'none'   // never use HTTP cache for sw.js
-                });
-            }).then(function(reg) {
-                console.log('[App] SW registered (fresh)');
-                reg.update();
+            // 2. Reload ONCE when a genuinely new SW takes control.
+            //    Guard with _swRefreshing to prevent infinite loops.
+            //    Only act if there was already a controller (= this is an update,
+            //    not the very first SW registration on a fresh browser).
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (_swRefreshing) return;
+                _swRefreshing = true;
+                console.log('[App] New SW took control — reloading once');
+                window.location.reload();
             });
 
-            // 3. Reload when the new SW takes control (most reliable update signal)
-            navigator.serviceWorker.addEventListener('controllerchange', function() {
-                console.log('[App] New SW took control — reloading');
-                window.location.reload();
+            // 3. Register (not re-register) the SW.
+            //    updateViaCache:'none' ensures the browser always fetches sw.js
+            //    from the network, bypassing any HTTP cache or file lock.
+            navigator.serviceWorker.register('/app/sw.js', {
+                scope: '/app/',
+                updateViaCache: 'none'
+            }).then(function(reg) {
+                console.log('[App] SW registered, scope:', reg.scope);
+                // Kick off an update check every time the page loads
+                reg.update();
             });
         }
     </script>
