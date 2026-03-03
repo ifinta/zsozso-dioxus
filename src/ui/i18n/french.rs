@@ -103,4 +103,11 @@ impl UiI18n for FrenchUi {
 
     // Info tab – version
     fn info_version(&self, ver: &str) -> String { format!("Version\u{00A0}: {}", ver) }
+
+    // Network switch modal
+    fn network_switch_save_prompt(&self) -> &'static str { "Vous avez une cl\u{00E9} secr\u{00E8}te charg\u{00E9}e. Voulez-vous la sauvegarder avant de changer de r\u{00E9}seau\u{00A0}?" }
+    fn btn_save_and_switch(&self) -> &'static str { "\u{1F4BE} Sauvegarder et changer" }
+    fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Changer et sauvegarder" }
+    fn btn_switch_without_saving(&self) -> &'static str { "Changer sans sauvegarder" }
+    fn btn_cancel(&self) -> &'static str { "Annuler" }
 }

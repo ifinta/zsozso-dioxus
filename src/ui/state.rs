@@ -30,6 +30,9 @@ pub struct WalletState {
     pub auth_state: Signal<AuthState>,
     pub prf_key: Signal<Option<String>>,
     pub ping_status: Signal<Option<String>>,
+    /// When Some, shows a modal asking the user to save the secret before switching network.
+    /// The value is the target network the user wants to switch to.
+    pub network_switch_pending: Signal<Option<NetworkEnvironment>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -47,5 +50,6 @@ pub fn use_wallet_state() -> WalletState {
         auth_state: use_signal(AuthState::default),
         prf_key: use_signal(|| None),
         ping_status: use_signal(|| None),
+        network_switch_pending: use_signal(|| None),
     }
 }

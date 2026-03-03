@@ -171,9 +171,11 @@ impl AppController {
         });
     }
 
-    /// Save key to local store — encrypted with passkey if PRF available
+    /// Save key to local store — encrypted with passkey if PRF available.
+    /// The stored format is 'tn:secret' for testnet or 'mn:secret' for mainnet.
     pub fn save_to_store(&self) {
         let lang = *self.s.language.read();
+        let net = *self.s.current_network.read();
         let i18n = ui_i18n(lang);
         
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
@@ -181,8 +183,13 @@ impl AppController {
             let secret = secret.clone();
             let prf_key = self.s.prf_key.read().clone();
             spawn(async move {
+                let prefix = match net {
+                    NetworkEnvironment::Test => "tn:",
+                    NetworkEnvironment::Production => "mn:",
+                };
+                let prefixed_secret = format!("{}{}", prefix, secret.as_str());
                 let data_to_save = if is_localhost() {
-                    secret.to_string()
+                    prefixed_secret
                 } else {
                     let prf = match &prf_key {
                         Some(key) => key.clone(),
@@ -191,7 +198,7 @@ impl AppController {
                             return;
                         }
                     };
-                    match passkey::passkey_encrypt(secret.as_str(), &prf).await {
+                    match passkey::passkey_encrypt(&prefixed_secret, &prf).await {
                         Ok(encrypted) => encrypted,
                         Err(e) => {
                             log(&i18n.fmt_error(&e));
@@ -209,13 +216,14 @@ impl AppController {
         }
     }
 
-    /// Load key from local store — decrypted with passkey if PRF available
+    /// Load key from local store — decrypted with passkey if PRF available.
+    /// Parses the 'tn:' / 'mn:' prefix to restore the correct network.
     pub fn load_from_store(&self) {
         let lang = *self.s.language.read();
-        let net = *self.s.current_network.read();
         let i18n = ui_i18n(lang);
         let mut pk_signal = self.s.public_key;
         let mut sk_signal = self.s.secret_key_hidden;
+        let mut net_signal = self.s.current_network;
         let prf_key = self.s.prf_key.read().clone();
 
         log(&i18n.loading_started().to_string());
@@ -224,7 +232,7 @@ impl AppController {
         spawn(async move {
             match store.load().await {
                 Ok(stored_data) => {
-                    let secret = if is_localhost() {
+                    let decrypted = if is_localhost() {
                         stored_data
                     } else {
                         let prf = match &prf_key {
@@ -235,16 +243,28 @@ impl AppController {
                             }
                         };
                         match passkey::passkey_decrypt(&stored_data, &prf).await {
-                            Ok(decrypted) => decrypted,
+                            Ok(d) => d,
                             Err(e) => {
                                 log(&i18n.fmt_error(&e));
                                 return;
                             }
                         }
                     };
+
+                    // Parse network prefix
+                    let (net, secret) = if let Some(rest) = decrypted.strip_prefix("tn:") {
+                        (NetworkEnvironment::Test, rest.to_string())
+                    } else if let Some(rest) = decrypted.strip_prefix("mn:") {
+                        (NetworkEnvironment::Production, rest.to_string())
+                    } else {
+                        // Legacy data without prefix — default to current network
+                        (*net_signal.read(), decrypted)
+                    };
+
                     log(&i18n.key_loaded_len(secret.len()));
                     let lgr = StellarLedger::new(net, lang);
                     if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
+                        net_signal.set(net);
                         pk_signal.set(Some(pub_key_str));
                         sk_signal.set(Some(Zeroizing::new(secret)));
                         log(&i18n.ui_updated_with_key().to_string());
@@ -276,10 +296,62 @@ impl AppController {
             NetworkEnvironment::Production
         };
 
+        // If there is a secret in memory, ask the user whether to save first
+        let has_secret = self.s.secret_key_hidden.read().is_some();
+        if has_secret {
+            let mut pending = self.s.network_switch_pending;
+            pending.set(Some(next));
+        } else {
+            self.do_switch_network(next);
+        }
+    }
+
+    /// Actually perform the network switch (clears XDR).
+    fn do_switch_network(&self, next: NetworkEnvironment) {
         let mut current_network = self.s.current_network;
         let mut generated_xdr = self.s.generated_xdr;
         current_network.set(next);
         generated_xdr.set(String::new());
+    }
+
+    /// User confirmed: save the secret with the current network, then switch.
+    pub fn confirm_network_switch_save(&self) {
+        // Save first (uses current network for the prefix)
+        self.save_to_store();
+
+        // Now switch to the pending network
+        if let Some(next) = *self.s.network_switch_pending.read() {
+            self.do_switch_network(next);
+        }
+        let mut pending = self.s.network_switch_pending;
+        pending.set(None);
+    }
+
+    /// User confirmed: switch to the new network first, then save with the new prefix.
+    pub fn confirm_network_switch_and_save(&self) {
+        if let Some(next) = *self.s.network_switch_pending.read() {
+            self.do_switch_network(next);
+        }
+        let mut pending = self.s.network_switch_pending;
+        pending.set(None);
+
+        // Save after switching (uses new network for the prefix)
+        self.save_to_store();
+    }
+
+    /// User declined saving: just switch network without saving.
+    pub fn confirm_network_switch_discard(&self) {
+        if let Some(next) = *self.s.network_switch_pending.read() {
+            self.do_switch_network(next);
+        }
+        let mut pending = self.s.network_switch_pending;
+        pending.set(None);
+    }
+
+    /// User cancelled the network switch entirely.
+    pub fn cancel_network_switch(&self) {
+        let mut pending = self.s.network_switch_pending;
+        pending.set(None);
     }
 
     /// Open camera QR scanner and log the scanned public key to the console.

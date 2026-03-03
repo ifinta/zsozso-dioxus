@@ -99,6 +99,39 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                 }
             }
         }
+
+        // Network switch save modal
+        if s.network_switch_pending.read().is_some() {
+            div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100;",
+                div { style: "background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);",
+                    p { style: "margin-bottom: 20px; font-size: 1em; color: #333;",
+                        "{i18n.network_switch_save_prompt()}"
+                    }
+                    div { style: "display: flex; flex-direction: column; gap: 10px;",
+                        button {
+                            style: "padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                            onclick: move |_| ctrl.confirm_network_switch_save(),
+                            "{i18n.btn_save_and_switch()}"
+                        }
+                        button {
+                            style: "padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                            onclick: move |_| ctrl.confirm_network_switch_and_save(),
+                            "{i18n.btn_switch_and_save()}"
+                        }
+                        button {
+                            style: "padding: 12px 24px; background: #ffc107; color: #333; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                            onclick: move |_| ctrl.confirm_network_switch_discard(),
+                            "{i18n.btn_switch_without_saving()}"
+                        }
+                        button {
+                            style: "padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                            onclick: move |_| ctrl.cancel_network_switch(),
+                            "{i18n.btn_cancel()}"
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

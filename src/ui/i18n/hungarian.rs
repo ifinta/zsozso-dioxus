@@ -103,4 +103,11 @@ impl UiI18n for HungarianUi {
 
     // Info tab – version
     fn info_version(&self, ver: &str) -> String { format!("Verzió: {}", ver) }
+
+    // Network switch modal
+    fn network_switch_save_prompt(&self) -> &'static str { "Van betöltött titkos kulcsod. Szeretnéd elmenteni a hálózatváltás előtt?" }
+    fn btn_save_and_switch(&self) -> &'static str { "\u{1F4BE} Mentés és váltás" }
+    fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Váltás és mentés" }
+    fn btn_switch_without_saving(&self) -> &'static str { "Váltás mentés nélkül" }
+    fn btn_cancel(&self) -> &'static str { "Mégse" }
 }

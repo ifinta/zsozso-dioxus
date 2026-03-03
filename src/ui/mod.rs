@@ -10,17 +10,27 @@ pub mod qr_scanner;
 pub mod toast;
 
 use dioxus::prelude::*;
-use state::use_wallet_state;
+use state::{use_wallet_state, AuthState};
 use controller::AppController;
 use toast::UpdateNotification;
 
 pub fn app() -> Element {
     let state = use_wallet_state();
     let ctrl = AppController::new(state);
+    let mut auto_loaded = use_signal(|| false);
 
     // Clear clipboard when the tab/browser is closed
     use_hook(|| {
         clipboard::register_beforeunload_cleanup();
+    });
+
+    // Auto-load secret from store after authentication
+    use_effect(move || {
+        let auth = *state.auth_state.read();
+        if auth == AuthState::Authenticated && !auto_loaded() {
+            auto_loaded.set(true);
+            ctrl.load_from_store();
+        }
     });
 
     rsx! {

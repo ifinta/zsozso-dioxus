@@ -103,4 +103,11 @@ impl UiI18n for SpanishUi {
 
     // Info tab – version
     fn info_version(&self, ver: &str) -> String { format!("Versión: {}", ver) }
+
+    // Network switch modal
+    fn network_switch_save_prompt(&self) -> &'static str { "\u{00BF}Tiene una clave secreta cargada. Desea guardarla antes de cambiar de red?" }
+    fn btn_save_and_switch(&self) -> &'static str { "\u{1F4BE} Guardar y cambiar" }
+    fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Cambiar y guardar" }
+    fn btn_switch_without_saving(&self) -> &'static str { "Cambiar sin guardar" }
+    fn btn_cancel(&self) -> &'static str { "Cancelar" }
 }

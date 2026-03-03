@@ -103,4 +103,11 @@ impl UiI18n for EnglishUi {
 
     // Info tab – version
     fn info_version(&self, ver: &str) -> String { format!("Version: {}", ver) }
+
+    // Network switch modal
+    fn network_switch_save_prompt(&self) -> &'static str { "You have a secret key loaded. Would you like to save it before switching networks?" }
+    fn btn_save_and_switch(&self) -> &'static str { "\u{1F4BE} Save & Switch" }
+    fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Switch & Save" }
+    fn btn_switch_without_saving(&self) -> &'static str { "Switch without saving" }
+    fn btn_cancel(&self) -> &'static str { "Cancel" }
 }

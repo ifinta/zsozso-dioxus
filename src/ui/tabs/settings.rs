@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use qrcode::{QrCode, render::svg};
 use crate::ui::state::WalletState;
 use crate::ui::controller::AppController;
 use crate::ui::i18n::UiI18n;
@@ -62,10 +63,27 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
         }
 
         // Key Input & Generation
-        div { style: "display: flex; gap: 10px; margin-bottom: 20px;",
+        div { style: "display: flex; gap: 6px; margin-bottom: 20px; align-items: center;",
             button { onclick: move |_| ctrl.generate_key(), "{i18n.btn_new_key()}" }
+            button {
+                style: "padding: 5px 10px; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;",
+                onclick: move |_| {
+                    let mut input_value = s.input_value;
+                    spawn(async move {
+                        match crate::ui::qr_scanner::scan_qr().await {
+                            Ok(text) => input_value.set(text),
+                            Err(e) => {
+                                if e != "cancelled" {
+                                    crate::ui::log(&format!("QR scan error: {}", e));
+                                }
+                            }
+                        }
+                    });
+                },
+                "QR"
+            }
             input {
-                style: "flex-grow: 1; padding: 5px;",
+                style: "flex-grow: 1; min-width: 0; padding: 5px;",
                 r#type: "password",
                 placeholder: "{i18n.lbl_import_ph()}",
                 value: "{s.input_value}",
@@ -109,6 +127,24 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
                 }
 
                 if *s.show_secret.read() {
+                    div { style: "text-align: center; margin-top: 15px;",
+                        {
+                            let qr_svg = QrCode::new(secret.as_str().as_bytes())
+                                .map(|code| {
+                                    code.render::<svg::Color>()
+                                        .min_dimensions(200, 200)
+                                        .max_dimensions(280, 280)
+                                        .quiet_zone(true)
+                                        .build()
+                                })
+                                .unwrap_or_default();
+                            rsx! {
+                                div { style: "display: inline-block; padding: 12px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);",
+                                    dangerous_inner_html: "{qr_svg}"
+                                }
+                            }
+                        }
+                    }
                     p { style: "margin-top: 15px; font-family: monospace; word-break: break-all; background: white; padding: 10px;",
                         "{secret.as_str()}"
                     }

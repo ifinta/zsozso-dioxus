@@ -49,52 +49,52 @@ pub fn render_log_tab(i18n: &dyn UiI18n) -> Element {
 
     rsx! {
         div { style: "display: flex; flex-direction: column; height: 100%;",
-            // Header row with title and buttons
-            div { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;",
-                h3 { style: "margin: 0; font-size: 1.1em;", "{i18n.tab_log()}" }
-                div { style: "display: flex; gap: 8px; flex-wrap: wrap;",
-                    // Refresh button
-                    button {
-                        style: "padding: 6px 14px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em;",
-                        onclick: move |_| {
-                            log_text.set(read_log_buffer());
-                        },
-                        "{i18n.log_refresh()}"
-                    }
-                    // Upload button
-                    button {
-                        style: "padding: 6px 14px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em;",
-                        onclick: {
+            // Title
+            h3 { style: "margin: 0 0 10px 0; font-size: 1.1em;", "{i18n.tab_log()}" }
+
+            // Buttons — each full width, stacked vertically
+            div { style: "display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;",
+                // Refresh button
+                button {
+                    style: "width: 100%; padding: 10px 14px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; font-weight: bold;",
+                    onclick: move |_| {
+                        log_text.set(read_log_buffer());
+                    },
+                    "{i18n.log_refresh()}"
+                }
+                // Upload button
+                button {
+                    style: "width: 100%; padding: 10px 14px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; font-weight: bold;",
+                    onclick: {
+                        let uploading_msg = uploading_msg.clone();
+                        let upload_ok_msg = upload_ok_msg.clone();
+                        let upload_empty_msg = upload_empty_msg.clone();
+                        move |_| {
                             let uploading_msg = uploading_msg.clone();
                             let upload_ok_msg = upload_ok_msg.clone();
                             let upload_empty_msg = upload_empty_msg.clone();
-                            move |_| {
-                                let uploading_msg = uploading_msg.clone();
-                                let upload_ok_msg = upload_ok_msg.clone();
-                                let upload_empty_msg = upload_empty_msg.clone();
-                                spawn(async move {
-                                    upload_status.set(uploading_msg);
-                                    let result = upload_log_buffer().await;
-                                    match result.as_str() {
-                                        "OK" => upload_status.set(upload_ok_msg),
-                                        "EMPTY" => upload_status.set(upload_empty_msg),
-                                        other => upload_status.set(format!("\u{274C} {}", other)),
-                                    }
-                                });
-                            }
-                        },
-                        "{i18n.log_upload()}"
-                    }
-                    // Clear button
-                    button {
-                        style: "padding: 6px 14px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em;",
-                        onclick: move |_| {
-                            clear_log_buffer();
-                            log_text.set(String::new());
-                            upload_status.set(String::new());
-                        },
-                        "{i18n.log_clear()}"
-                    }
+                            spawn(async move {
+                                upload_status.set(uploading_msg);
+                                let result = upload_log_buffer().await;
+                                match result.as_str() {
+                                    "OK" => upload_status.set(upload_ok_msg),
+                                    "EMPTY" => upload_status.set(upload_empty_msg),
+                                    other => upload_status.set(format!("\u{274C} {}", other)),
+                                }
+                            });
+                        }
+                    },
+                    "{i18n.log_upload()}"
+                }
+                // Clear button
+                button {
+                    style: "width: 100%; padding: 10px 14px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; font-weight: bold;",
+                    onclick: move |_| {
+                        clear_log_buffer();
+                        log_text.set(String::new());
+                        upload_status.set(String::new());
+                    },
+                    "{i18n.log_clear()}"
                 }
             }
 

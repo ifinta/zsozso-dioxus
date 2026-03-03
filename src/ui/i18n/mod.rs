@@ -113,6 +113,13 @@ pub trait UiI18n {
 
     // Info tab – version
     fn info_version(&self, ver: &str) -> String;
+
+    // Network switch modal
+    fn network_switch_save_prompt(&self) -> &'static str;
+    fn btn_save_and_switch(&self) -> &'static str;
+    fn btn_switch_and_save(&self) -> &'static str;
+    fn btn_switch_without_saving(&self) -> &'static str;
+    fn btn_cancel(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation
