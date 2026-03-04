@@ -35,7 +35,7 @@ pub fn app() -> Element {
 
     rsx! {
         {view::render_app(state, ctrl)}
-        UpdateNotification {}
+        //UpdateNotification {}
     }
 }
 
