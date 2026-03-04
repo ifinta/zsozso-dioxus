@@ -32,29 +32,54 @@
 <link rel="preload" as="script" href="/app/assets/zsozso-dxh79e02174cbbc2f4.js" crossorigin></head>
 <body>
     <div id="main"></div>
-    
+    <div id="pst"><p>Zsozso loading...</p><p>If it needs more as 1 minute, check the connection,
+ of course, and if the issue not solved, it needs to restart the App (Drop it from running
+ applications and start it again).</p><p>Refreshing the App not succeeds just now. Please, report
+ the issue with logs to the dev!).</p></div>
+    <div id="sw-update-banner" style="display:none; position:fixed; top:0; left:0; width:100%;
+ background:#17a2b8; color:#fff; text-align:center; padding:18px 10px; z-index:99999;
+ font-family:sans-serif; font-size:1.15rem; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+        <span>A new version is available.</span>
+        <button id="sw-refresh-btn" style="margin-left:16px; padding:8px 28px; font-size:1.1rem;
+ border:none; border-radius:6px; background:#fff; color:#17a2b8; font-weight:bold;
+ cursor:pointer;">Refresh</button>
+    </div>
+
     <!-- Service Worker Registration with auto-reload on update -->
     <script>
         if ('serviceWorker' in navigator) {
             var _swRefreshing = false;
+
+            // Show the update banner with a manual Refresh button
+            function _showRefreshBanner() {
+                var banner = document.getElementById('sw-update-banner');
+                if (banner) banner.style.display = 'block';
+            }
+
+            // Wire up the Refresh button
+            document.getElementById('sw-refresh-btn').addEventListener('click', function() {
+                // Hard reload: bypass cache to pick up the new SW-served assets
+                window.location.reload();
+            });
 
             // 1. Listen for update signal from the SW
             navigator.serviceWorker.addEventListener('message', function(event) {
                 if (event.data?.type === '__ZSOZSO_SW_UPDATED') {
                     window.__ZSOZSO_UPDATE_READY = true;
                     window.dispatchEvent(new CustomEvent('zsozso_update_available'));
+                    // On PWA homescreen the automatic reload can freeze,
+                    // so show a manual Refresh button instead.
+                    _showRefreshBanner();
                 }
             });
 
-            // 2. Reload ONCE when a genuinely new SW takes control.
-            //    Guard with _swRefreshing to prevent infinite loops.
-            //    Only act if there was already a controller (= this is an update,
-            //    not the very first SW registration on a fresh browser).
+            // 2. When a new SW takes control, show the Refresh banner
+            //    instead of auto-reloading (which can white-screen on PWA).
             navigator.serviceWorker.addEventListener('controllerchange', function() {
                 if (_swRefreshing) return;
                 _swRefreshing = true;
-                console.log('[App] New SW took control — reloading once');
-                window.location.reload();
+                console.log('[App] New SW took control — showing Refresh banner');
+                _showRefreshBanner();
             });
 
             // 3. Register (not re-register) the SW.
