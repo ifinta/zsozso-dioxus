@@ -6,6 +6,17 @@ use crate::db::gundb::SeaKeyPair;
 use super::status::TxStatus;
 use super::tabs::Tab;
 
+/// Read biometric preference from localStorage (synchronous).
+fn biometric_enabled_default() -> bool {
+    web_sys::window()
+        .and_then(|w| w.local_storage().ok())
+        .flatten()
+        .and_then(|s| s.get_item("zsozso:biometric").ok())
+        .flatten()
+        .map(|v| v == "true")
+        .unwrap_or(false)
+}
+
 /// Passkey authentication state machine.
 #[derive(Clone, Copy, PartialEq, Default)]
 pub enum AuthState {
@@ -40,9 +51,14 @@ pub struct WalletState {
     pub sea_modal_input: Signal<Zeroizing<String>>,
     /// Generated SEA key pair (kept only in memory, never persisted).
     pub sea_key_pair: Signal<Option<SeaKeyPair>>,
+    /// Whether biometric (passkey) authentication is enabled.
+    pub biometric_enabled: Signal<bool>,
+    /// Whether the "enable biometric to save" error modal is shown.
+    pub biometric_save_modal_open: Signal<bool>,
 }
 
 pub fn use_wallet_state() -> WalletState {
+    let bio = biometric_enabled_default();
     WalletState {
         language: use_signal(Language::default),
         public_key: use_signal(|| None),
@@ -54,12 +70,15 @@ pub fn use_wallet_state() -> WalletState {
         current_network: use_signal(|| NetworkEnvironment::Production),
         clipboard_modal_open: use_signal(|| false),
         active_tab: use_signal(Tab::default),
-        auth_state: use_signal(AuthState::default),
+        // If biometric is disabled, skip the auth gate entirely.
+        auth_state: use_signal(move || if bio { AuthState::default() } else { AuthState::Authenticated }),
         prf_key: use_signal(|| None),
         ping_status: use_signal(|| None),
         network_switch_pending: use_signal(|| None),
         sea_modal_open: use_signal(|| false),
         sea_modal_input: use_signal(|| Zeroizing::new(String::new())),
         sea_key_pair: use_signal(|| None),
+        biometric_enabled: use_signal(move || bio),
+        biometric_save_modal_open: use_signal(|| false),
     }
 }

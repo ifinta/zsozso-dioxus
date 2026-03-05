@@ -130,6 +130,11 @@ pub trait UiI18n {
     fn sea_keys_generated(&self) -> &'static str;
     fn sea_generation_error(&self, e: &str) -> String;
     fn btn_close(&self) -> &'static str;
+
+    // Biometric identification toggle
+    fn lbl_biometric(&self) -> &'static str;
+    fn lbl_biometric_desc(&self) -> &'static str;
+    fn biometric_required_to_save(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

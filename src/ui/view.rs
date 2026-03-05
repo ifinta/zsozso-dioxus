@@ -133,6 +133,23 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
             }
         }
 
+        // Biometric required to save – error modal
+        if *s.biometric_save_modal_open.read() {
+            div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1150;",
+                div { style: "background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);",
+                    h3 { style: "margin: 0 0 12px; color: #dc3545;", "\u{26A0}\u{FE0F}" }
+                    p { style: "margin: 0 0 20px; color: #333; font-size: 1em;",
+                        "{i18n.biometric_required_to_save()}"
+                    }
+                    button {
+                        style: "padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
+                        onclick: move |_| ctrl.dismiss_biometric_save_modal(),
+                        "{i18n.btn_close()}"
+                    }
+                }
+            }
+        }
+
         // SEA key generation modal
         if *s.sea_modal_open.read() {
             div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1200;",

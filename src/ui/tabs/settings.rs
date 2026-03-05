@@ -62,6 +62,37 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             code { style: "word-break: break-all; font-weight: bold;", "{pk_display}" }
         }
 
+        // Biometric Identification Toggle
+        {
+            let biometric_on = *s.biometric_enabled.read();
+            let track_bg = if biometric_on { "#28a745" } else { "#ccc" };
+            let thumb_left = if biometric_on { "24px" } else { "2px" };
+            let track_extra = if biometric_on { "opacity: 0.6; cursor: not-allowed;" } else { "cursor: pointer;" };
+            let track_style = format!(
+                "position: relative; width: 50px; height: 28px; background: {}; border-radius: 28px; transition: background 0.3s; flex-shrink: 0; {}",
+                track_bg, track_extra
+            );
+            rsx! {
+                div { style: "display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;",
+                    div { style: "flex: 1; margin-right: 12px;",
+                        p { style: "font-weight: bold; margin: 0; font-size: 0.95em;", "{i18n.lbl_biometric()}" }
+                        p { style: "font-size: 0.8em; color: #666; margin: 4px 0 0;", "{i18n.lbl_biometric_desc()}" }
+                    }
+                    div {
+                        style: "{track_style}",
+                        onclick: move |_| {
+                            if !biometric_on {
+                                ctrl.toggle_biometric();
+                            }
+                        },
+                        div {
+                            style: "position: absolute; top: 3px; left: {thumb_left}; width: 22px; height: 22px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"
+                        }
+                    }
+                }
+            }
+        }
+
         // Key Input & Generation
         div { style: "display: flex; gap: 6px; margin-bottom: 20px; align-items: center;",
             button { onclick: move |_| ctrl.generate_key(), "{i18n.btn_new_key()}" }

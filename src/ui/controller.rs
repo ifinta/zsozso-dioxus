@@ -47,13 +47,50 @@ impl AppController {
         });
     }
 
-    /// Reveal the secret key after passkey verification.
-    /// On localhost the passkey check is skipped for easier testing.
-    pub fn reveal_secret(&self) {
-        let mut show_secret = self.s.show_secret;
+    /// Enable biometric identification.
+    /// Initialises the passkey to obtain the PRF key. Once enabled, cannot be turned off.
+    pub fn toggle_biometric(&self) {
+        // Only allow turning ON (switch is disabled when already on)
+        if *self.s.biometric_enabled.read() {
+            return;
+        }
+
+        let mut biometric = self.s.biometric_enabled;
+        let mut prf_key_signal = self.s.prf_key;
 
         spawn(async move {
             if is_localhost() {
+                biometric.set(true);
+                write_biometric_pref(true);
+                return;
+            }
+            match passkey::passkey_init().await {
+                Ok(result) if result.success => {
+                    prf_key_signal.set(result.prf_key);
+                    biometric.set(true);
+                    write_biometric_pref(true);
+                }
+                _ => {
+                    log("Failed to initialize biometric authentication");
+                }
+            }
+        });
+    }
+
+    /// Dismiss the biometric save error modal.
+    pub fn dismiss_biometric_save_modal(&self) {
+        let mut modal = self.s.biometric_save_modal_open;
+        modal.set(false);
+    }
+
+    /// Reveal the secret key after passkey verification.
+    /// On localhost or when biometric is disabled, the passkey check is skipped.
+    pub fn reveal_secret(&self) {
+        let mut show_secret = self.s.show_secret;
+        let biometric_on = *self.s.biometric_enabled.read();
+
+        spawn(async move {
+            if is_localhost() || !biometric_on {
                 show_secret.set(true);
                 return;
             }
@@ -172,12 +209,20 @@ impl AppController {
         });
     }
 
-    /// Save key to local store — encrypted with passkey if PRF available.
+    /// Save key to local store — encrypted with passkey if PRF available and biometric is on.
     /// The stored format is 'tn:secret' for testnet or 'mn:secret' for mainnet.
     pub fn save_to_store(&self) {
         let lang = *self.s.language.read();
         let net = *self.s.current_network.read();
         let i18n = ui_i18n(lang);
+        let biometric_on = *self.s.biometric_enabled.read();
+
+        // Refuse to save when biometric is off (except localhost dev)
+        if !biometric_on && !is_localhost() {
+            let mut modal = self.s.biometric_save_modal_open;
+            modal.set(true);
+            return;
+        }
         
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
             let store = new_store(lang);
@@ -189,7 +234,7 @@ impl AppController {
                     NetworkEnvironment::Production => "mn:",
                 };
                 let prefixed_secret = format!("{}{}", prefix, secret.as_str());
-                let data_to_save = if is_localhost() {
+                let data_to_save = if is_localhost() || !biometric_on {
                     prefixed_secret
                 } else {
                     let prf = match &prf_key {
@@ -217,7 +262,7 @@ impl AppController {
         }
     }
 
-    /// Load key from local store — decrypted with passkey if PRF available.
+    /// Load key from local store — decrypted with passkey if PRF available and biometric is on.
     /// Parses the 'tn:' / 'mn:' prefix to restore the correct network.
     pub fn load_from_store(&self) {
         let lang = *self.s.language.read();
@@ -226,6 +271,7 @@ impl AppController {
         let mut sk_signal = self.s.secret_key_hidden;
         let mut net_signal = self.s.current_network;
         let prf_key = self.s.prf_key.read().clone();
+        let biometric_on = *self.s.biometric_enabled.read();
 
         log(&i18n.loading_started().to_string());
         let store = new_store(lang);
@@ -233,7 +279,7 @@ impl AppController {
         spawn(async move {
             match store.load().await {
                 Ok(stored_data) => {
-                    let decrypted = if is_localhost() {
+                    let decrypted = if is_localhost() || !biometric_on {
                         stored_data
                     } else {
                         let prf = match &prf_key {
@@ -470,4 +516,14 @@ fn is_localhost() -> bool {
     web_sys::window()
         .and_then(|w| w.location().hostname().ok())
         .is_some_and(|h| h == "localhost" || h == "127.0.0.1" || h == "::1")
+}
+
+/// Write biometric preference to localStorage.
+fn write_biometric_pref(enabled: bool) {
+    if let Some(storage) = web_sys::window()
+        .and_then(|w| w.local_storage().ok())
+        .flatten()
+    {
+        let _ = storage.set_item("zsozso:biometric", if enabled { "true" } else { "false" });
+    }
 }

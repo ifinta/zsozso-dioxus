@@ -120,4 +120,9 @@ impl UiI18n for FrenchUi {
     fn sea_keys_generated(&self) -> &'static str { "\u{2705} Clés SEA générées et chargées en mémoire." }
     fn sea_generation_error(&self, e: &str) -> String { format!("\u{274C} Échec de la génération\u{00A0}: {}", e) }
     fn btn_close(&self) -> &'static str { "Fermer" }
+
+    // Biometric identification toggle
+    fn lbl_biometric(&self) -> &'static str { "Identification biométrique" }
+    fn lbl_biometric_desc(&self) -> &'static str { "Utiliser l'authentification biométrique pour protéger votre portefeuille" }
+    fn biometric_required_to_save(&self) -> &'static str { "Veuillez activer l'Identification biométrique dans les Paramètres avant de sauvegarder votre secret." }
 }

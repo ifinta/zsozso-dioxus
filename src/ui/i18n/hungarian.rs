@@ -120,4 +120,9 @@ impl UiI18n for HungarianUi {
     fn sea_keys_generated(&self) -> &'static str { "\u{2705} SEA kulcsok generálva és betöltve a memóriába." }
     fn sea_generation_error(&self, e: &str) -> String { format!("\u{274C} Kulcsgenerálás sikertelen: {}", e) }
     fn btn_close(&self) -> &'static str { "Bezárás" }
+
+    // Biometric identification toggle
+    fn lbl_biometric(&self) -> &'static str { "Biometrikus azonosítás" }
+    fn lbl_biometric_desc(&self) -> &'static str { "Biometrikus hitelesítés használata a tárca védelméhez" }
+    fn biometric_required_to_save(&self) -> &'static str { "Kérjük, először kapcsold be a Biometrikus azonosítást a Beállításokban a titok mentése előtt." }
 }

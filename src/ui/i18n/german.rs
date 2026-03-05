@@ -120,4 +120,9 @@ impl UiI18n for GermanUi {
     fn sea_keys_generated(&self) -> &'static str { "\u{2705} SEA-Schlüssel generiert und im Speicher geladen." }
     fn sea_generation_error(&self, e: &str) -> String { format!("\u{274C} Schlüsselgenerierung fehlgeschlagen: {}", e) }
     fn btn_close(&self) -> &'static str { "Schließen" }
+
+    // Biometric identification toggle
+    fn lbl_biometric(&self) -> &'static str { "Biometrische Identifikation" }
+    fn lbl_biometric_desc(&self) -> &'static str { "Biometrische Authentifizierung zum Schutz Ihrer Wallet verwenden" }
+    fn biometric_required_to_save(&self) -> &'static str { "Bitte aktivieren Sie die Biometrische Identifikation in den Einstellungen, bevor Sie Ihr Geheimnis speichern." }
 }
