@@ -29,10 +29,17 @@
 
     <!-- In-app log ring buffer (must load before any console.log calls) -->
     <script src="log_bridge.js"></script>
-<link rel="preload" as="script" href="/app/assets/zsozso-dxh85492ea43358c073.js" crossorigin></head>
+<link rel="preload" as="script" href="/app/assets/zsozso-dxhc09f452ae04d868b.js" crossorigin></head>
 <body>
+    <div id="sw-update-banner" style="display:none; position:fixed; top:0; left:0; width:100%;
+ background:#17a2b8; color:#fff; text-align:center; padding:18px 10px; z-index:99999;
+ font-family:sans-serif; font-size:1.15rem; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+        <span>A new version is available.</span>
+        <button id="sw-refresh-btn" style="margin-left:16px; padding:8px 28px; font-size:1.1rem;
+ border:none; border-radius:6px; background:#fff; color:#17a2b8; font-weight:bold;
+ cursor:pointer;">Refresh</button>
+    </div>
     <div id="main"></div>
-
     <!-- Service Worker Registration with auto-reload on update -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -43,6 +50,12 @@
                 var banner = document.getElementById('sw-update-banner');
                 if (banner) banner.style.display = 'block';
             }
+
+            // Wire up the Refresh button
+            document.getElementById('sw-refresh-btn').addEventListener('click', function() {
+                // Hard reload: bypass cache to pick up the new SW-served assets
+                window.location.reload();
+            });
 
             // 1. Listen for update signal from the SW
             navigator.serviceWorker.addEventListener('message', function(event) {
@@ -77,6 +90,6 @@
             });
         }
     </script>
-<script type="module" async src="/app/assets/zsozso-dxh85492ea43358c073.js"></script>
+<script type="module" async src="/app/assets/zsozso-dxhc09f452ae04d868b.js"></script>
             </body>
 </html>

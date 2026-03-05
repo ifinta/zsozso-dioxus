@@ -7,6 +7,7 @@ use super::i18n::ui_i18n;
 use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::Store;
 use crate::store::passkey;
+use crate::db::gundb::{GunSea, Sea};
 use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
 use crate::ledger::sc::SmartContract;
@@ -412,6 +413,54 @@ impl AppController {
                     ping_status.set(Some(i18n.ping_error(&e)));
                 }
             }
+        });
+    }
+
+    /// Open the SEA key generation modal.
+    pub fn open_sea_modal(&self) {
+        let mut open = self.s.sea_modal_open;
+        open.set(true);
+    }
+
+    /// Close the SEA key generation modal and zeroize the input.
+    pub fn close_sea_modal(&self) {
+        let mut open = self.s.sea_modal_open;
+        let mut input = self.s.sea_modal_input;
+        open.set(false);
+        input.set(Zeroizing::new(String::new()));
+    }
+
+    /// Generate a SEA key pair from the passphrase entered in the modal.
+    /// The passphrase is zeroized after use; the keys live only in memory.
+    pub fn generate_sea_keys(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+
+        let passphrase = self.s.sea_modal_input.read().clone();
+        if passphrase.is_empty() {
+            return;
+        }
+
+        let mut key_pair_signal = self.s.sea_key_pair;
+        let mut modal_open = self.s.sea_modal_open;
+        let mut modal_input = self.s.sea_modal_input;
+
+        spawn(async move {
+            let sea = GunSea::new(lang);
+            match sea.pair_from_seed(&passphrase).await {
+                Ok(pair) => {
+                    key_pair_signal.set(Some(pair));
+                    let i18n = ui_i18n(lang);
+                    log(&i18n.sea_keys_generated().to_string());
+                }
+                Err(e) => {
+                    let i18n = ui_i18n(lang);
+                    log(&i18n.sea_generation_error(&e));
+                }
+            }
+            // Zeroize the passphrase input and close the modal
+            modal_input.set(Zeroizing::new(String::new()));
+            modal_open.set(false);
         });
     }
 }

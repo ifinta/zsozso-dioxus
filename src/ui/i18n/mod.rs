@@ -120,6 +120,16 @@ pub trait UiI18n {
     fn btn_switch_and_save(&self) -> &'static str;
     fn btn_switch_without_saving(&self) -> &'static str;
     fn btn_cancel(&self) -> &'static str;
+
+    // SEA key generation modal
+    fn btn_generate_db_secret(&self) -> &'static str;
+    fn sea_modal_title(&self) -> &'static str;
+    fn sea_modal_placeholder(&self) -> &'static str;
+    fn btn_generate_db_keys(&self) -> &'static str;
+    fn sea_generating(&self) -> &'static str;
+    fn sea_keys_generated(&self) -> &'static str;
+    fn sea_generation_error(&self, e: &str) -> String;
+    fn btn_close(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

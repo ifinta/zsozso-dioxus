@@ -158,6 +158,20 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             button { onclick: move |_| ctrl.load_from_store(), style: "flex: 1;", "{i18n.btn_load()}" }
         }
 
+        // GunDB SEA key generation
+        div { style: "margin-top: 15px;",
+            button {
+                style: "width: 100%; padding: 10px; background: #6f42c1; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;",
+                onclick: move |_| ctrl.open_sea_modal(),
+                "{i18n.btn_generate_db_secret()}"
+            }
+            if s.sea_key_pair.read().is_some() {
+                p { style: "text-align: center; font-size: 0.8em; color: #28a745; margin-top: 5px;",
+                    "{i18n.sea_keys_generated()}"
+                }
+            }
+        }
+
         // XDR Generator Button
         button {
             style: "margin-top: 30px; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",

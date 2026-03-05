@@ -110,4 +110,14 @@ impl UiI18n for HungarianUi {
     fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Váltás és mentés" }
     fn btn_switch_without_saving(&self) -> &'static str { "Váltás mentés nélkül" }
     fn btn_cancel(&self) -> &'static str { "Mégse" }
+
+    // SEA key generation modal
+    fn btn_generate_db_secret(&self) -> &'static str { "\u{1F511} DB Titok Generálása" }
+    fn sea_modal_title(&self) -> &'static str { "GunDB SEA Kulcsok Generálása" }
+    fn sea_modal_placeholder(&self) -> &'static str { "Írd be a titkos jelszót..." }
+    fn btn_generate_db_keys(&self) -> &'static str { "\u{1F511} DB Kulcsok Generálása" }
+    fn sea_generating(&self) -> &'static str { "\u{1F504} Kulcsok generálása..." }
+    fn sea_keys_generated(&self) -> &'static str { "\u{2705} SEA kulcsok generálva és betöltve a memóriába." }
+    fn sea_generation_error(&self, e: &str) -> String { format!("\u{274C} Kulcsgenerálás sikertelen: {}", e) }
+    fn btn_close(&self) -> &'static str { "Bezárás" }
 }

@@ -110,4 +110,14 @@ impl UiI18n for SpanishUi {
     fn btn_switch_and_save(&self) -> &'static str { "\u{1F504} Cambiar y guardar" }
     fn btn_switch_without_saving(&self) -> &'static str { "Cambiar sin guardar" }
     fn btn_cancel(&self) -> &'static str { "Cancelar" }
+
+    // SEA key generation modal
+    fn btn_generate_db_secret(&self) -> &'static str { "\u{1F511} Generar secreto DB" }
+    fn sea_modal_title(&self) -> &'static str { "Generar claves GunDB SEA" }
+    fn sea_modal_placeholder(&self) -> &'static str { "Ingrese la frase secreta..." }
+    fn btn_generate_db_keys(&self) -> &'static str { "\u{1F511} Generar claves DB" }
+    fn sea_generating(&self) -> &'static str { "\u{1F504} Generando claves..." }
+    fn sea_keys_generated(&self) -> &'static str { "\u{2705} Claves SEA generadas y cargadas en memoria." }
+    fn sea_generation_error(&self, e: &str) -> String { format!("\u{274C} Error al generar claves: {}", e) }
+    fn btn_close(&self) -> &'static str { "Cerrar" }
 }

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use zeroize::Zeroizing;
 use crate::ledger::NetworkEnvironment;
 use crate::i18n::Language;
+use crate::db::gundb::SeaKeyPair;
 use super::status::TxStatus;
 use super::tabs::Tab;
 
@@ -33,6 +34,12 @@ pub struct WalletState {
     /// When Some, shows a modal asking the user to save the secret before switching network.
     /// The value is the target network the user wants to switch to.
     pub network_switch_pending: Signal<Option<NetworkEnvironment>>,
+    /// Whether the SEA key generation modal is open.
+    pub sea_modal_open: Signal<bool>,
+    /// Input value for the SEA secret passphrase (kept only in memory).
+    pub sea_modal_input: Signal<Zeroizing<String>>,
+    /// Generated SEA key pair (kept only in memory, never persisted).
+    pub sea_key_pair: Signal<Option<SeaKeyPair>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -51,5 +58,8 @@ pub fn use_wallet_state() -> WalletState {
         prf_key: use_signal(|| None),
         ping_status: use_signal(|| None),
         network_switch_pending: use_signal(|| None),
+        sea_modal_open: use_signal(|| false),
+        sea_modal_input: use_signal(|| Zeroizing::new(String::new())),
+        sea_key_pair: use_signal(|| None),
     }
 }
