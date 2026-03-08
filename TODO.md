@@ -125,11 +125,11 @@ python3 /path/to/server/log_upload_server.py &
 The SW (`sw.js`) handles offline caching and version management:
 
 - **`index.html`** registers the SW with `updateViaCache: 'none'` — the browser always fetches `sw.js` from the network, bypassing HTTP cache
-- On every page load, `reg.update()` triggers a byte-comparison check against the server copy
+- Every page load triggers a byte-comparison check against the server copy
 - When the browser detects a change, the new SW calls `skipWaiting()` + `clients.claim()` to take control immediately
 - The `controllerchange` event in `index.html` auto-reloads the page once (guarded by `_swRefreshing` flag to prevent loops)
-- **`CACHE_NAME`** in `sw.js` must be incremented on every deploy (e.g. `zsozso-v2` → `zsozso-v3`) so the old cache is purged
-- A Rust-side **`UpdateNotification`** toast (`ui/toast.rs`) polls `window.__ZSOZSO_UPDATE_READY` and shows a manual "Update now" button when an update is detected
+- **`CACHE_NAME`** in `sw.js` must be incremented on every deploy (e.g. `zsozso-v2` → `zsozso-v3`) so the old cache is purged (the build.sh do it)
+- A toast (in `index.html`) polls `window.__ZSOZSO_UPDATE_READY` and shows a manual "Refresh" button when an update is detected
 - The SW also forwards its own log entries to the main page via `postMessage`, visible in the Log tab
 
 ### Internationalization (i18n) Traits
@@ -206,11 +206,6 @@ npx serve target/dx/zsozso/release/web/public/ -l 8080
 └── assets/
     ├── zsozso-dxh*.js (from build output)
     └── zsozso_bg-dxh*.wasm (from build output)
-
-A change of the CACHE_NAME in the sw.js at every deploy is needed
-(the browser will detect the change and re-fetch all cached assets).
-**Use `./build.sh`** — it stamps the CACHE_NAME automatically using the current
-date+time (e.g. `zsozso-v0.20250308.1430-`), so you never have to update it by hand.
 ```
 
 ```bash
@@ -224,7 +219,7 @@ npx serve dist/ -l 8080
 ```
 
 **IMPORTANT — Service Worker versioning:**
-`build.sh` automatically stamps a date+time CACHE_NAME (e.g. `zsozso-v0.20250308.1430-`)
+`build.sh` automatically stamps a date+time and the git commit into CACHE_NAME (e.g. `zsozso-v0.20250308.1430-a2356fc0`)
 into `assets/sw.js` before building. This guarantees the browser detects every
 new deployment as an update and clears the old cache.
 
@@ -252,7 +247,6 @@ The project includes PWA support out of the box via the following files:
 
 - **`assets/manifest.json`** — PWA manifest with app metadata, icons, and display settings
 - **`assets/sw.js`** — Service Worker for offline caching of assets
-- **`assets/pwa-install.js`** — Install prompt handling for Android Chrome
 - **`index.html`** — Includes PWA meta tags, manifest link, and service worker registration
 - **`assets/icon-192.png` and `assets/icon-512.png`** — App icons (placeholders, replace with custom designs)
 
