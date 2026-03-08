@@ -87,8 +87,8 @@ self.addEventListener('activate', event => {
             // that is NOT an update and must not trigger a reload loop.
             if (isUpdate) {
                 return self.clients.matchAll({ type: 'window' }).then(clients => {
-                    clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_UPDATED' }));
-                    LOG('Update detected — notified', clients.length, 'client(s) to reload');
+                    clients.forEach(c => c.postMessage({ type: '__ZSOZSO_SW_UPDATED', version: CACHE_NAME }));
+                    LOG('Update detected — notified', clients.length, 'client(s)');
                 });
             } else {
                 LOG('No old caches found — not an update, skipping reload notification');

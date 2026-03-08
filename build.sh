@@ -24,10 +24,14 @@ SW_FILE="assets/sw.js"
 echo "CACHE_NAME → ${CACHE_NAME}"
 $DRY && exit 0
 
-# ── 2. Stamp CACHE_NAME into sw.js ───────────────────────────────────────────
+# ── 2. Stamp CACHE_NAME into sw.js and index.html ────────────────────────────
 # Replace the existing CACHE_NAME line regardless of its current value.
 sed -i "s|^const CACHE_NAME = '.*';|const CACHE_NAME = '${CACHE_NAME}';|" "${SW_FILE}"
 echo "Stamped ${SW_FILE}"
+
+# Stamp the page-side version so the client can compare with the SW version.
+sed -i "s|window.__APP_VERSION = '.*'|window.__APP_VERSION = '${CACHE_NAME}'|" "index.html"
+echo "Stamped index.html"
 
 # ── 3. Build ──────────────────────────────────────────────────────────────────
 echo "Running: dx build --release --platform web --features web"
