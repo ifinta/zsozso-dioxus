@@ -1,5 +1,6 @@
-// Cache version — increment on every deploy so the old cache gets cleared
-const CACHE_NAME = 'zsozso-v0.2008-';
+// Cache version — updated automatically by build.sh on every deploy.
+// Format: zsozso-v0.YYYYMMDD.HHmm-COMMITHASH (date+time+git hash)
+const CACHE_NAME = 'zsozso-v0.20260308.0459-b8345eb5';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
@@ -133,12 +134,16 @@ self.addEventListener('fetch', event => {
     // Hashed assets (.js, .wasm) → cache-first
     // Their content never changes (guaranteed by the hash), so
     // it's enough to download once and always serve from cache afterwards.
-    // IMPORTANT: exclude sw.js itself — the browser must always fetch it
-    // fresh so it can detect updates and trigger the install event.
+    // IMPORTANT exclusions:
+    //   sw.js         — browser must always fetch it fresh to detect updates
+    //   *_bridge.js   — bridge files are NOT hashed; they can change between
+    //                   deploys and nginx already serves them with no-cache.
+    //                   Caching them here would serve stale bridge code after
+    //                   a deployment until CACHE_NAME is bumped.
     const isCacheableAsset =
         /\.(js|wasm|css|png|jpg|svg|ico|woff2?)$/.test(url.pathname) &&
         !url.pathname.endsWith('/sw.js') &&
-        !url.pathname.endsWith('/log_bridge.js');
+        !url.pathname.endsWith('_bridge.js');
 
     if (isCacheableAsset) {
         event.respondWith(
