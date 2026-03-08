@@ -29,6 +29,9 @@
 
     <!-- In-app log ring buffer (must load before any console.log calls) -->
     <script src="log_bridge.js"></script>
+
+    <!-- App version — stamped by build.sh; must precede SW registration -->
+    <script>window.__APP_VERSION = 'zsozso-v0.20260308.0905-b6d9ddbc';</script>
 <link rel="preload" as="script" href="/app/assets/zsozso-dxh24c3f295ba3e1976.js" crossorigin></head>
 <body>
     <div id="sw-update-banner" style="display:none; position:fixed; top:0; left:0; width:100%;
@@ -40,53 +43,67 @@
  cursor:pointer;">Refresh</button>
     </div>
     <div id="main"></div>
-    <!-- Service Worker Registration with auto-reload on update -->
+    <!-- Service Worker Registration with version-aware update detection -->
     <script>
         if ('serviceWorker' in navigator) {
-            var _swRefreshing = false;
-
-            // Show the update banner with a manual Refresh button
             function _showRefreshBanner() {
                 var banner = document.getElementById('sw-update-banner');
-                if (banner) banner.style.display = 'block';
+                if (banner && banner.style.display !== 'block') {
+                    banner.style.display = 'block';
+                    console.log('[App] Update banner shown');
+                }
             }
 
-            // Wire up the Refresh button
             document.getElementById('sw-refresh-btn').addEventListener('click', function() {
-                // Hard reload: bypass cache to pick up the new SW-served assets
                 window.location.reload();
             });
+
+            // Only show the banner when the SW version differs from the page version.
+            // When the page was loaded via network-first navigation, it already has
+            // the latest content and the banner would be misleading.
+            function _checkVersionAndNotify(swVersion) {
+                if (!swVersion) return;
+                if (window.__APP_VERSION && swVersion === window.__APP_VERSION) {
+                    console.log('[App] SW version matches page — no refresh needed');
+                    return;
+                }
+                console.log('[App] SW', swVersion, '≠ page', window.__APP_VERSION);
+                _showRefreshBanner();
+            }
 
             // 1. Listen for update signal from the SW
             navigator.serviceWorker.addEventListener('message', function(event) {
                 if (event.data?.type === '__ZSOZSO_SW_UPDATED') {
-                    window.__ZSOZSO_UPDATE_READY = true;
-                    window.dispatchEvent(new CustomEvent('zsozso_update_available'));
-                    // On PWA homescreen the automatic reload can freeze,
-                    // so show a manual Refresh button instead.
-                    _showRefreshBanner();
+                    _checkVersionAndNotify(event.data.version);
                 }
             });
 
-            // 2. When a new SW takes control, show the Refresh banner
-            //    instead of auto-reloading (which can white-screen on PWA).
+            // 2. When a new SW takes control, verify versions match
             navigator.serviceWorker.addEventListener('controllerchange', function() {
-                if (_swRefreshing) return;
-                _swRefreshing = true;
-                console.log('[App] New SW took control — showing Refresh banner');
-                _showRefreshBanner();
+                if (!navigator.serviceWorker.controller) return;
+                var ch = new MessageChannel();
+                ch.port1.onmessage = function(e) {
+                    if (e.data && e.data.version) {
+                        _checkVersionAndNotify(e.data.version);
+                    }
+                };
+                navigator.serviceWorker.controller.postMessage(
+                    { type: 'GET_VERSION' }, [ch.port2]
+                );
             });
 
-            // 3. Register (not re-register) the SW.
-            //    updateViaCache:'none' ensures the browser always fetches sw.js
-            //    from the network, bypassing any HTTP cache or file lock.
+            // 3. Register the SW
             navigator.serviceWorker.register('/app/sw.js', {
                 scope: '/app/',
                 updateViaCache: 'none'
             }).then(function(reg) {
                 console.log('[App] SW registered, scope:', reg.scope);
-                // Kick off an update check every time the page loads
                 reg.update();
+
+                // Re-check for updates whenever the tab becomes visible
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'visible') reg.update();
+                });
             });
         }
     </script>
