@@ -1,6 +1,6 @@
 // Cache version — updated automatically by build.sh on every deploy.
 // Format: zsozso-v0.YYYYMMDD.HHmm-COMMITHASH (date+time+git hash)
-const CACHE_NAME = 'zsozso-v0.20260308.0905-b6d9ddbc';
+const CACHE_NAME = 'zsozso-v0.20260309.0040-2a2b004b';
 
 // ── SW-side log ring buffer (max 100) ──
 const _swLogBuffer = [];
