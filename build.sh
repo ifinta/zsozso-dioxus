@@ -17,7 +17,8 @@ DRY=false
 
 # ── 1. Generate CACHE_NAME ────────────────────────────────────────────────────
 BUILD_TS="$(date +%Y%m%d.%H%M)"
-CACHE_NAME="zsozso-v0.${BUILD_TS}-"
+GIT_HASH="$(git rev-parse --short=8 HEAD)"
+CACHE_NAME="zsozso-v0.${BUILD_TS}-${GIT_HASH}"
 SW_FILE="assets/sw.js"
 
 echo "CACHE_NAME → ${CACHE_NAME}"

@@ -24,6 +24,13 @@ async fn await_promise(val: JsValue) -> Result<JsValue, String> {
 
 // ── Public API ──
 
+/// Result of passkey registration (no PRF).
+#[derive(serde::Deserialize)]
+pub struct RegisterResult {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
 /// Result of passkey init (register + authenticate).
 #[derive(serde::Deserialize)]
 pub struct InitResult {
@@ -33,8 +40,21 @@ pub struct InitResult {
     pub error: Option<String>,
 }
 
-/// Initialise passkey: register if first time, then authenticate with PRF.
-/// Returns the PRF-derived key (if the authenticator supports PRF).
+/// Register a passkey credential (one biometric prompt, no PRF authentication).
+/// Call this when enabling biometric; PRF key is obtained lazily later.
+pub async fn passkey_register() -> Result<RegisterResult, String> {
+    let func = get_bridge_fn("register_only")?;
+    let promise_val = func.call0(&JsValue::NULL)
+        .map_err(|e| format!("register_only() call error: {:?}", e))?;
+    let result = await_promise(promise_val).await?;
+    let json_str = result.as_string()
+        .ok_or_else(|| "register_only() returned non-string".to_string())?;
+    serde_json::from_str(&json_str)
+        .map_err(|e| format!("register_only() parse error: {}", e))
+}
+
+/// Authenticate with PRF to obtain the encryption key.
+/// Credential must already exist (call passkey_register first).
 pub async fn passkey_init() -> Result<InitResult, String> {
     let func = get_bridge_fn("init")?;
     let promise_val = func.call0(&JsValue::NULL)

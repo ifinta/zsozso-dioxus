@@ -2,7 +2,8 @@
  * passkey_bridge.js — WebAuthn Passkey + Web Crypto bridge for Rust/WASM.
  *
  * Exposes window.__passkey_bridge with:
- *   init()              — register (if first time) + authenticate with PRF
+ *   register_only()     — register passkey (one biometric prompt, no PRF)
+ *   init()              — authenticate with PRF (credential must exist)
  *   verify()            — lightweight auth check (no PRF)
  *   encrypt(b64, key)   — AES-GCM encrypt with PRF-derived key
  *   decrypt(b64, key)   — AES-GCM decrypt with PRF-derived key
@@ -79,7 +80,7 @@
                     { alg: -257, type: "public-key" },   // RS256
                 ],
                 authenticatorSelection: {
-                    residentKey: "required",
+                    residentKey: "preferred",
                     userVerification: "required",
                 },
                 extensions: { prf: {} },
@@ -123,7 +124,24 @@
         return null; // PRF not available, auth still succeeded
     }
 
-    // ── Public: init (register if needed + authenticate) ──
+    // ── Public: register_only (one biometric prompt, no PRF) ──
+
+    async function registerOnly() {
+        if (!window.PublicKeyCredential) {
+            return JSON.stringify({ success: false, error: "passkeys_not_supported" });
+        }
+        try {
+            var credIdB64 = await loadCredentialId();
+            if (!credIdB64) {
+                await register();
+            }
+            return JSON.stringify({ success: true, error: null });
+        } catch (e) {
+            return JSON.stringify({ success: false, error: e.message || String(e) });
+        }
+    }
+
+    // ── Public: init (authenticate with PRF — credential must already exist) ──
 
     async function init() {
         if (!window.PublicKeyCredential) {
@@ -133,7 +151,8 @@
         try {
             var credIdB64 = await loadCredentialId();
             if (!credIdB64) {
-                await register();
+                // No credential yet — caller should use register_only() first
+                return JSON.stringify({ success: false, prfKey: null, error: "not_registered" });
             }
 
             var prfKey = await authenticateWithPrf();
@@ -220,6 +239,7 @@
     // ── Expose bridge ──
 
     window.__passkey_bridge = {
+        register_only: registerOnly,
         init: init,
         verify: verify,
         encrypt: encrypt,

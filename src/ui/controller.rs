@@ -48,7 +48,8 @@ impl AppController {
     }
 
     /// Enable biometric identification.
-    /// Initialises the passkey to obtain the PRF key. Once enabled, cannot be turned off.
+    /// Registers the passkey (one biometric prompt). PRF key is obtained
+    /// lazily when actually needed (save/load/auth gate).
     pub fn toggle_biometric(&self) {
         // Only allow turning ON (switch is disabled when already on)
         if *self.s.biometric_enabled.read() {
@@ -56,7 +57,6 @@ impl AppController {
         }
 
         let mut biometric = self.s.biometric_enabled;
-        let mut prf_key_signal = self.s.prf_key;
 
         spawn(async move {
             if is_localhost() {
@@ -64,14 +64,18 @@ impl AppController {
                 write_biometric_pref(true);
                 return;
             }
-            match passkey::passkey_init().await {
+            match passkey::passkey_register().await {
                 Ok(result) if result.success => {
-                    prf_key_signal.set(result.prf_key);
                     biometric.set(true);
                     write_biometric_pref(true);
+                    log("Biometric registration successful");
                 }
-                _ => {
-                    log("Failed to initialize biometric authentication");
+                Ok(result) => {
+                    let err = result.error.unwrap_or_else(|| "Unknown error".into());
+                    log(&format!("Biometric registration failed: {}", err));
+                }
+                Err(e) => {
+                    log(&format!("Biometric registration error: {}", e));
                 }
             }
         });
@@ -211,6 +215,7 @@ impl AppController {
 
     /// Save key to local store — encrypted with passkey if PRF available and biometric is on.
     /// The stored format is 'tn:secret' for testnet or 'mn:secret' for mainnet.
+    /// If the PRF key is not yet available, authenticates lazily (one biometric prompt).
     pub fn save_to_store(&self) {
         let lang = *self.s.language.read();
         let net = *self.s.current_network.read();
@@ -227,7 +232,8 @@ impl AppController {
         if let Some(secret) = self.s.secret_key_hidden.read().as_ref() {
             let store = new_store(lang);
             let secret = secret.clone();
-            let prf_key = self.s.prf_key.read().clone();
+            let existing_prf = self.s.prf_key.read().clone();
+            let mut prf_key_signal = self.s.prf_key;
             spawn(async move {
                 let prefix = match net {
                     NetworkEnvironment::Test => "tn:",
@@ -237,11 +243,33 @@ impl AppController {
                 let data_to_save = if is_localhost() || !biometric_on {
                     prefixed_secret
                 } else {
-                    let prf = match &prf_key {
-                        Some(key) => key.clone(),
+                    let prf = match existing_prf {
+                        Some(key) => key,
                         None => {
-                            log(&i18n.fmt_error(i18n.no_prf_key()));
-                            return;
+                            // Lazy PRF: authenticate to get encryption key
+                            match passkey::passkey_init().await {
+                                Ok(result) if result.success => {
+                                    match result.prf_key {
+                                        Some(key) => {
+                                            prf_key_signal.set(Some(key.clone()));
+                                            key
+                                        }
+                                        None => {
+                                            log(&i18n.fmt_error(i18n.no_prf_key()));
+                                            return;
+                                        }
+                                    }
+                                }
+                                Ok(result) => {
+                                    let err = result.error.unwrap_or_else(|| "Authentication failed".into());
+                                    log(&i18n.fmt_error(&err));
+                                    return;
+                                }
+                                Err(e) => {
+                                    log(&i18n.fmt_error(&e));
+                                    return;
+                                }
+                            }
                         }
                     };
                     match passkey::passkey_encrypt(&prefixed_secret, &prf).await {
@@ -264,13 +292,15 @@ impl AppController {
 
     /// Load key from local store — decrypted with passkey if PRF available and biometric is on.
     /// Parses the 'tn:' / 'mn:' prefix to restore the correct network.
+    /// If the PRF key is not yet available, authenticates lazily (one biometric prompt).
     pub fn load_from_store(&self) {
         let lang = *self.s.language.read();
         let i18n = ui_i18n(lang);
         let mut pk_signal = self.s.public_key;
         let mut sk_signal = self.s.secret_key_hidden;
         let mut net_signal = self.s.current_network;
-        let prf_key = self.s.prf_key.read().clone();
+        let existing_prf = self.s.prf_key.read().clone();
+        let mut prf_key_signal = self.s.prf_key;
         let biometric_on = *self.s.biometric_enabled.read();
 
         log(&i18n.loading_started().to_string());
@@ -282,11 +312,33 @@ impl AppController {
                     let decrypted = if is_localhost() || !biometric_on {
                         stored_data
                     } else {
-                        let prf = match &prf_key {
-                            Some(key) => key.clone(),
+                        let prf = match existing_prf {
+                            Some(key) => key,
                             None => {
-                                log(&i18n.fmt_error(i18n.no_prf_key()));
-                                return;
+                                // Lazy PRF: authenticate to get decryption key
+                                match passkey::passkey_init().await {
+                                    Ok(result) if result.success => {
+                                        match result.prf_key {
+                                            Some(key) => {
+                                                prf_key_signal.set(Some(key.clone()));
+                                                key
+                                            }
+                                            None => {
+                                                log(&i18n.fmt_error(i18n.no_prf_key()));
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    Ok(result) => {
+                                        let err = result.error.unwrap_or_else(|| "Authentication failed".into());
+                                        log(&i18n.fmt_error(&err));
+                                        return;
+                                    }
+                                    Err(e) => {
+                                        log(&i18n.fmt_error(&e));
+                                        return;
+                                    }
+                                }
                             }
                         };
                         match passkey::passkey_decrypt(&stored_data, &prf).await {
