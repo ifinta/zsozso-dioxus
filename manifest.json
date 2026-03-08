@@ -2,6 +2,7 @@
     "name": "Zsozso Wallet",
     "short_name": "Zsozso",
     "description": "Stellar wallet for the Iceberg Protocol ecosystem",
+    "id": "/app/",
     "start_url": "/app/",
     "display": "standalone",
     "orientation": "portrait",

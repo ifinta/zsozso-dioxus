@@ -207,19 +207,33 @@ npx serve target/dx/zsozso/release/web/public/ -l 8080
     ├── zsozso-dxh*.js (from build output)
     └── zsozso_bg-dxh*.wasm (from build output)
 
-A change of the CACHE_NAME in the sw.js at every deploy a need 
-(the browser will reread the cache at the user...):
-...
-const CACHE_NAME = 'zsozso-v2'; => 'zsozso-v3' ...
-...
+A change of the CACHE_NAME in the sw.js at every deploy is needed
+(the browser will detect the change and re-fetch all cached assets).
+**Use `./build.sh`** — it stamps the CACHE_NAME automatically using the current
+date+time (e.g. `zsozso-v0.20250308.1430-`), so you never have to update it by hand.
 ```
 
 ```bash
-# I use an intermediate directory to collect the deployment files in dist/app
-# Later it is possible to use python or npx to serve the pages from dist/
-npx serve dist/ -l 8080
+# build.sh stamps a fresh CACHE_NAME (date+time) into assets/sw.js, runs dx build,
+# and copies the output into dist/app/ — so CACHE_NAME is always up-to-date.
+./build.sh
 
-# After the launch the App is reachable with this link: http://localhost:8080/app/ in a browser 
+# Serve locally:
+npx serve dist/ -l 8080
+# → http://localhost:8080/app/
+```
+
+**IMPORTANT — Service Worker versioning:**
+`build.sh` automatically stamps a date+time CACHE_NAME (e.g. `zsozso-v0.20250308.1430-`)
+into `assets/sw.js` before building. This guarantees the browser detects every
+new deployment as an update and clears the old cache.
+
+**Never deploy manually edited dist files** — always run `./build.sh` so the source
+and the deployed artifact stay in sync.
+
+```bash
+# Dry run — print what CACHE_NAME would be used, without building:
+./build.sh --dry
 ```
 
 ### Feature Flag
