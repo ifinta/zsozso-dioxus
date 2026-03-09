@@ -125,4 +125,19 @@ impl UiI18n for FrenchUi {
     fn lbl_biometric(&self) -> &'static str { "Identification biométrique" }
     fn lbl_biometric_desc(&self) -> &'static str { "Utiliser l'authentification biométrique pour protéger votre portefeuille" }
     fn biometric_required_to_save(&self) -> &'static str { "Veuillez activer l'Identification biométrique dans les Paramètres avant de sauvegarder votre secret." }
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str { "Surnom" }
+    fn lbl_nickname_ph(&self) -> &'static str { "Entrez votre surnom..." }
+    fn btn_save_nickname(&self) -> &'static str { "\u{1F4BE} Enregistrer" }
+    fn nickname_saved(&self) -> &'static str { "\u{2705} Surnom enregistré\u{00A0}!" }
+    fn nickname_save_error(&self, e: &str) -> String { format!("\u{274C} Échec de l'enregistrement du surnom\u{00A0}: {}", e) }
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str { "Parents" }
+    fn lbl_workers(&self) -> &'static str { "Travailleurs" }
+    fn btn_new_worker(&self) -> &'static str { "\u{2795} Nouveau" }
+    fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Chargez d'abord une clé (onglet Paramètres)." }
+    fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Travailleur ajouté\u{00A0}: {}", key) }
+    fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Échec de l'ajout du travailleur\u{00A0}: {}", e) }
 }

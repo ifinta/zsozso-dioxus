@@ -135,6 +135,21 @@ pub trait UiI18n {
     fn lbl_biometric(&self) -> &'static str;
     fn lbl_biometric_desc(&self) -> &'static str;
     fn biometric_required_to_save(&self) -> &'static str;
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str;
+    fn lbl_nickname_ph(&self) -> &'static str;
+    fn btn_save_nickname(&self) -> &'static str;
+    fn nickname_saved(&self) -> &'static str;
+    fn nickname_save_error(&self, e: &str) -> String;
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str;
+    fn lbl_workers(&self) -> &'static str;
+    fn btn_new_worker(&self) -> &'static str;
+    fn network_no_key(&self) -> &'static str;
+    fn network_add_worker_success(&self, key: &str) -> String;
+    fn network_add_worker_error(&self, e: &str) -> String;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

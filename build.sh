@@ -42,9 +42,10 @@ DX_OUT="target/dx/zsozso/release/web/public"
 DIST_DIR="dist/app"
 
 echo "Staging ${DX_OUT}/ → ${DIST_DIR}/"
-rm -rf "${DIST_DIR}"
-mkdir -p "${DIST_DIR}"
+rm -rf "${DIST_DIR}/assets"
+mkdir -p "${DIST_DIR}/assets"
 cp -r "${DX_OUT}/." "${DIST_DIR}/"
+rm -rf "${DX_OUT}"
 
 echo ""
 echo "✓ Build complete — CACHE_NAME: ${CACHE_NAME}"

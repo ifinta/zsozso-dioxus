@@ -125,4 +125,19 @@ impl UiI18n for EnglishUi {
     fn lbl_biometric(&self) -> &'static str { "Biometric Identification" }
     fn lbl_biometric_desc(&self) -> &'static str { "Use biometric authentication to protect your wallet" }
     fn biometric_required_to_save(&self) -> &'static str { "Please enable Biometric Identification in Settings before saving your secret." }
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str { "Nickname" }
+    fn lbl_nickname_ph(&self) -> &'static str { "Enter your nickname..." }
+    fn btn_save_nickname(&self) -> &'static str { "\u{1F4BE} Save" }
+    fn nickname_saved(&self) -> &'static str { "\u{2705} Nickname saved!" }
+    fn nickname_save_error(&self, e: &str) -> String { format!("\u{274C} Failed to save nickname: {}", e) }
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str { "Parents" }
+    fn lbl_workers(&self) -> &'static str { "Workers" }
+    fn btn_new_worker(&self) -> &'static str { "\u{2795} New" }
+    fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Load a key first (Settings tab)." }
+    fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Worker added: {}", key) }
+    fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Failed to add worker: {}", e) }
 }

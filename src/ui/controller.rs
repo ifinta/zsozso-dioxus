@@ -8,6 +8,7 @@ use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
 use crate::store::Store;
 use crate::store::passkey;
 use crate::db::gundb::{GunSea, Sea};
+use crate::db::network::{NetworkGraph, GunNetworkGraph};
 use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
 use crate::ledger::sc::SmartContract;
@@ -451,6 +452,119 @@ impl AppController {
     pub fn cancel_network_switch(&self) {
         let mut pending = self.s.network_switch_pending;
         pending.set(None);
+    }
+
+    /// Open camera QR scanner and add the scanned public key as a worker.
+    pub fn add_worker_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let public_key = self.s.public_key.read().clone();
+        let mut ping_status = self.s.ping_status;
+        let mut workers_signal = self.s.network_workers;
+        let mut nicknames_signal = self.s.network_nicknames;
+        let mut parents_signal = self.s.network_parents;
+
+        let Some(pk) = public_key else {
+            ping_status.set(Some(i18n.network_no_key().to_string()));
+            return;
+        };
+
+        ping_status.set(Some(i18n.scan_scanning().to_string()));
+
+        spawn(async move {
+            match super::qr_scanner::scan_qr().await {
+                Ok(worker_key) => {
+                    let graph = GunNetworkGraph::new(lang);
+                    match graph.add_worker(&pk, &worker_key).await {
+                        Ok(_) => {
+                            let i18n = ui_i18n(lang);
+                            ping_status.set(Some(i18n.network_add_worker_success(&worker_key)));
+                            // Reload network data
+                            let workers = graph.get_workers(&pk).await.unwrap_or_default();
+                            workers_signal.set(workers.clone());
+                            let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
+                            parents_signal.set(ancestors.clone());
+                            let mut nicks = std::collections::HashMap::new();
+                            for key in ancestors.iter().chain(workers.iter()) {
+                                if let Ok(Some(nick)) = graph.get_nickname(key).await {
+                                    nicks.insert(key.clone(), nick);
+                                }
+                            }
+                            nicknames_signal.set(nicks);
+                        }
+                        Err(e) => {
+                            let i18n = ui_i18n(lang);
+                            ping_status.set(Some(i18n.network_add_worker_error(&e)));
+                        }
+                    }
+                }
+                Err(e) => {
+                    if e == "cancelled" {
+                        ping_status.set(None);
+                    } else {
+                        let i18n = ui_i18n(lang);
+                        ping_status.set(Some(i18n.scan_error(&e)));
+                    }
+                }
+            }
+        });
+    }
+
+    /// Load network hierarchy (parents, workers, nicknames) from the graph database.
+    pub fn load_network_action(&self) {
+        let public_key = self.s.public_key.read().clone();
+        let lang = *self.s.language.read();
+        let mut parents_signal = self.s.network_parents;
+        let mut workers_signal = self.s.network_workers;
+        let mut nicknames_signal = self.s.network_nicknames;
+        let mut nickname_signal = self.s.nickname;
+
+        let Some(pk) = public_key else { return };
+
+        spawn(async move {
+            let graph = GunNetworkGraph::new(lang);
+
+            let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
+            parents_signal.set(ancestors.clone());
+
+            let workers = graph.get_workers(&pk).await.unwrap_or_default();
+            workers_signal.set(workers.clone());
+
+            if let Ok(Some(nick)) = graph.get_nickname(&pk).await {
+                nickname_signal.set(nick);
+            }
+
+            let mut nicks = std::collections::HashMap::new();
+            for key in ancestors.iter().chain(workers.iter()) {
+                if let Ok(Some(nick)) = graph.get_nickname(key).await {
+                    nicks.insert(key.clone(), nick);
+                }
+            }
+            nicknames_signal.set(nicks);
+        });
+    }
+
+    /// Save the user's nickname to the graph database.
+    pub fn save_nickname_action(&self) {
+        let nickname = self.s.nickname.read().clone();
+        let public_key = self.s.public_key.read().clone();
+        let lang = *self.s.language.read();
+
+        let Some(pk) = public_key else { return };
+
+        spawn(async move {
+            let graph = GunNetworkGraph::new(lang);
+            match graph.set_nickname(&pk, &nickname).await {
+                Ok(_) => {
+                    let i18n = ui_i18n(lang);
+                    log(&i18n.nickname_saved().to_string());
+                }
+                Err(e) => {
+                    let i18n = ui_i18n(lang);
+                    log(&i18n.nickname_save_error(&e));
+                }
+            }
+        });
     }
 
     /// Open camera QR scanner and log the scanned public key to the console.

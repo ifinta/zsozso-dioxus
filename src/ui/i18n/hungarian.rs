@@ -125,4 +125,19 @@ impl UiI18n for HungarianUi {
     fn lbl_biometric(&self) -> &'static str { "Biometrikus azonosítás" }
     fn lbl_biometric_desc(&self) -> &'static str { "Biometrikus hitelesítés használata a tárca védelméhez" }
     fn biometric_required_to_save(&self) -> &'static str { "Kérjük, először kapcsold be a Biometrikus azonosítást a Beállításokban a titok mentése előtt." }
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str { "Becenév" }
+    fn lbl_nickname_ph(&self) -> &'static str { "Írd be a beceneved..." }
+    fn btn_save_nickname(&self) -> &'static str { "\u{1F4BE} Mentés" }
+    fn nickname_saved(&self) -> &'static str { "\u{2705} Becenév mentve!" }
+    fn nickname_save_error(&self, e: &str) -> String { format!("\u{274C} Becenév mentése sikertelen: {}", e) }
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str { "Szülők" }
+    fn lbl_workers(&self) -> &'static str { "Munkatársak" }
+    fn btn_new_worker(&self) -> &'static str { "\u{2795} Új" }
+    fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Előbb tölts be egy kulcsot (Beállítások fül)." }
+    fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Munkatárs hozzáadva: {}", key) }
+    fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Munkatárs hozzáadása sikertelen: {}", e) }
 }

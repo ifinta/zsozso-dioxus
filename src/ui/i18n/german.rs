@@ -125,4 +125,19 @@ impl UiI18n for GermanUi {
     fn lbl_biometric(&self) -> &'static str { "Biometrische Identifikation" }
     fn lbl_biometric_desc(&self) -> &'static str { "Biometrische Authentifizierung zum Schutz Ihrer Wallet verwenden" }
     fn biometric_required_to_save(&self) -> &'static str { "Bitte aktivieren Sie die Biometrische Identifikation in den Einstellungen, bevor Sie Ihr Geheimnis speichern." }
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str { "Spitzname" }
+    fn lbl_nickname_ph(&self) -> &'static str { "Spitzname eingeben..." }
+    fn btn_save_nickname(&self) -> &'static str { "\u{1F4BE} Speichern" }
+    fn nickname_saved(&self) -> &'static str { "\u{2705} Spitzname gespeichert!" }
+    fn nickname_save_error(&self, e: &str) -> String { format!("\u{274C} Spitzname konnte nicht gespeichert werden: {}", e) }
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str { "Eltern" }
+    fn lbl_workers(&self) -> &'static str { "Arbeiter" }
+    fn btn_new_worker(&self) -> &'static str { "\u{2795} Neu" }
+    fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Laden Sie zuerst einen Schlüssel (Tab Einstellungen)." }
+    fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Arbeiter hinzugefügt: {}", key) }
+    fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Arbeiter konnte nicht hinzugefügt werden: {}", e) }
 }

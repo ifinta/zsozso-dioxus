@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use dioxus::prelude::*;
 use zeroize::Zeroizing;
 use crate::ledger::NetworkEnvironment;
@@ -55,6 +56,14 @@ pub struct WalletState {
     pub biometric_enabled: Signal<bool>,
     /// Whether the "enable biometric to save" error modal is shown.
     pub biometric_save_modal_open: Signal<bool>,
+    /// Current user's nickname (visible to the whole network).
+    pub nickname: Signal<String>,
+    /// Ancestry chain (parent, grandparent, ...) — up to 6 levels.
+    pub network_parents: Signal<Vec<String>>,
+    /// Direct workers of this node.
+    pub network_workers: Signal<Vec<String>>,
+    /// Public key → nickname cache for displayed network nodes.
+    pub network_nicknames: Signal<HashMap<String, String>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -80,5 +89,9 @@ pub fn use_wallet_state() -> WalletState {
         sea_key_pair: use_signal(|| None),
         biometric_enabled: use_signal(move || bio),
         biometric_save_modal_open: use_signal(|| false),
+        nickname: use_signal(String::new),
+        network_parents: use_signal(Vec::new),
+        network_workers: use_signal(Vec::new),
+        network_nicknames: use_signal(HashMap::new),
     }
 }

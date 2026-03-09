@@ -125,4 +125,19 @@ impl UiI18n for SpanishUi {
     fn lbl_biometric(&self) -> &'static str { "Identificación biométrica" }
     fn lbl_biometric_desc(&self) -> &'static str { "Usar autenticación biométrica para proteger su billetera" }
     fn biometric_required_to_save(&self) -> &'static str { "Por favor, active la Identificación biométrica en Ajustes antes de guardar su secreto." }
+
+    // Nickname (Settings)
+    fn lbl_nickname(&self) -> &'static str { "Apodo" }
+    fn lbl_nickname_ph(&self) -> &'static str { "Ingrese su apodo..." }
+    fn btn_save_nickname(&self) -> &'static str { "\u{1F4BE} Guardar" }
+    fn nickname_saved(&self) -> &'static str { "\u{2705} ¡Apodo guardado!" }
+    fn nickname_save_error(&self, e: &str) -> String { format!("\u{274C} Error al guardar el apodo: {}", e) }
+
+    // Network tab – hierarchy
+    fn lbl_parents(&self) -> &'static str { "Padres" }
+    fn lbl_workers(&self) -> &'static str { "Trabajadores" }
+    fn btn_new_worker(&self) -> &'static str { "\u{2795} Nuevo" }
+    fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Cargue una clave primero (pestaña Ajustes)." }
+    fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Trabajador añadido: {}", key) }
+    fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Error al añadir trabajador: {}", e) }
 }

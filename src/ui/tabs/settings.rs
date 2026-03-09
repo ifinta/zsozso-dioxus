@@ -62,6 +62,26 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             code { style: "word-break: break-all; font-weight: bold;", "{pk_display}" }
         }
 
+        // Nickname
+        div { style: "display: flex; gap: 6px; margin-bottom: 20px; align-items: center;",
+            input {
+                style: "flex-grow: 1; min-width: 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px;",
+                r#type: "text",
+                maxlength: "16",
+                placeholder: "{i18n.lbl_nickname_ph()}",
+                value: "{s.nickname}",
+                oninput: move |evt| {
+                    let mut nickname = s.nickname;
+                    nickname.set(evt.value());
+                }
+            }
+            button {
+                style: "padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; white-space: nowrap;",
+                onclick: move |_| ctrl.save_nickname_action(),
+                "{i18n.btn_save_nickname()}"
+            }
+        }
+
         // Biometric Identification Toggle
         {
             let biometric_on = *s.biometric_enabled.read();

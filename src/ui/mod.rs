@@ -33,6 +33,14 @@ pub fn app() -> Element {
         }
     });
 
+    // Load network data when public key becomes available or changes
+    use_effect(move || {
+        let pk = state.public_key.read();
+        if pk.is_some() {
+            ctrl.load_network_action();
+        }
+    });
+
     rsx! {
         {view::render_app(state, ctrl)}
         //UpdateNotification {}
