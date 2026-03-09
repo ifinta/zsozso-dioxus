@@ -64,6 +64,8 @@ pub struct WalletState {
     pub network_workers: Signal<Vec<String>>,
     /// Public key → nickname cache for displayed network nodes.
     pub network_nicknames: Signal<HashMap<String, String>>,
+    /// CYF "not yet implemented" modal message (None = hidden).
+    pub cyf_modal_message: Signal<Option<String>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -93,5 +95,6 @@ pub fn use_wallet_state() -> WalletState {
         network_parents: use_signal(Vec::new),
         network_workers: use_signal(Vec::new),
         network_nicknames: use_signal(HashMap::new),
+        cyf_modal_message: use_signal(|| None),
     }
 }

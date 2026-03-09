@@ -55,7 +55,7 @@ impl UiI18n for GermanUi {
     fn btn_clear_clipboard(&self) -> &'static str { "🗑️ Zwischenablage leeren" }
 
     // Tab labels
-    fn tab_home(&self) -> &'static str { "Startseite" }
+    fn tab_cyf(&self) -> &'static str { "CYF" }
     fn tab_networking(&self) -> &'static str { "Netzwerk" }
     fn tab_info(&self) -> &'static str { "Info" }
     fn tab_settings(&self) -> &'static str { "Einstellungen" }
@@ -140,4 +140,10 @@ impl UiI18n for GermanUi {
     fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Laden Sie zuerst einen Schlüssel (Tab Einstellungen)." }
     fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Arbeiter hinzugefügt: {}", key) }
     fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Arbeiter konnte nicht hinzugefügt werden: {}", e) }
+
+    // CYF tab
+    fn btn_burn(&self) -> &'static str { "\u{1F525} Verbrennen" }
+    fn btn_mint(&self) -> &'static str { "\u{1FA99} Prägen" }
+    fn btn_ok(&self) -> &'static str { "OK" }
+    fn cyf_not_implemented(&self, fn_name: &str) -> String { format!("Die Funktion {} ist noch nicht implementiert.", fn_name) }
 }

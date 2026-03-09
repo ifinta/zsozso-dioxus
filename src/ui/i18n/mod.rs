@@ -65,7 +65,7 @@ pub trait UiI18n {
     fn btn_clear_clipboard(&self) -> &'static str;
 
     // Tab labels
-    fn tab_home(&self) -> &'static str;
+    fn tab_cyf(&self) -> &'static str;
     fn tab_networking(&self) -> &'static str;
     fn tab_info(&self) -> &'static str;
     fn tab_settings(&self) -> &'static str;
@@ -150,6 +150,12 @@ pub trait UiI18n {
     fn network_no_key(&self) -> &'static str;
     fn network_add_worker_success(&self, key: &str) -> String;
     fn network_add_worker_error(&self, e: &str) -> String;
+
+    // CYF tab
+    fn btn_burn(&self) -> &'static str;
+    fn btn_mint(&self) -> &'static str;
+    fn btn_ok(&self) -> &'static str;
+    fn cyf_not_implemented(&self, fn_name: &str) -> String;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

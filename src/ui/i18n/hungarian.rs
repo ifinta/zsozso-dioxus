@@ -55,7 +55,7 @@ impl UiI18n for HungarianUi {
     fn btn_clear_clipboard(&self) -> &'static str { "🗑️ Törlöm a vágólap tartalmát" }
 
     // Tab labels
-    fn tab_home(&self) -> &'static str { "Főoldal" }
+    fn tab_cyf(&self) -> &'static str { "CYF" }
     fn tab_networking(&self) -> &'static str { "Hálózat" }
     fn tab_info(&self) -> &'static str { "Infó" }
     fn tab_settings(&self) -> &'static str { "Beállítások" }
@@ -140,4 +140,10 @@ impl UiI18n for HungarianUi {
     fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Előbb tölts be egy kulcsot (Beállítások fül)." }
     fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Munkatárs hozzáadva: {}", key) }
     fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Munkatárs hozzáadása sikertelen: {}", e) }
+
+    // CYF tab
+    fn btn_burn(&self) -> &'static str { "\u{1F525} Égetés" }
+    fn btn_mint(&self) -> &'static str { "\u{1FA99} Kibocsátás" }
+    fn btn_ok(&self) -> &'static str { "OK" }
+    fn cyf_not_implemented(&self, fn_name: &str) -> String { format!("A(z) {} funkció még nincs implementálva.", fn_name) }
 }

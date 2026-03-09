@@ -55,7 +55,7 @@ impl UiI18n for EnglishUi {
     fn btn_clear_clipboard(&self) -> &'static str { "🗑️ Clear clipboard content" }
 
     // Tab labels
-    fn tab_home(&self) -> &'static str { "Home" }
+    fn tab_cyf(&self) -> &'static str { "CYF" }
     fn tab_networking(&self) -> &'static str { "Network" }
     fn tab_info(&self) -> &'static str { "Info" }
     fn tab_settings(&self) -> &'static str { "Settings" }
@@ -140,4 +140,10 @@ impl UiI18n for EnglishUi {
     fn network_no_key(&self) -> &'static str { "\u{26A0}\u{FE0F} Load a key first (Settings tab)." }
     fn network_add_worker_success(&self, key: &str) -> String { format!("\u{2705} Worker added: {}", key) }
     fn network_add_worker_error(&self, e: &str) -> String { format!("\u{274C} Failed to add worker: {}", e) }
+
+    // CYF tab
+    fn btn_burn(&self) -> &'static str { "\u{1F525} Burn" }
+    fn btn_mint(&self) -> &'static str { "\u{1FA99} Mint" }
+    fn btn_ok(&self) -> &'static str { "OK" }
+    fn cyf_not_implemented(&self, fn_name: &str) -> String { format!("The {} function is not yet implemented.", fn_name) }
 }

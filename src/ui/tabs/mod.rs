@@ -7,7 +7,7 @@ pub mod log;
 #[derive(Clone, Copy, PartialEq, Default)]
 pub enum Tab {
     #[default]
-    Home,
+    Cyf,
     Networking,
     Info,
     Settings,
