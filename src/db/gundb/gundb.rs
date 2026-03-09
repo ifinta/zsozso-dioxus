@@ -6,6 +6,10 @@ use super::{Db, GunConfig, GunValue};
 use super::i18n::{DbI18n, db_i18n};
 use super::sea::SeaKeyPair;
 
+fn log(msg: &str) {
+    web_sys::console::log_1(&msg.into());
+}
+
 /// GUN-compatible graph database.
 ///
 /// Delegates every operation to the real GUN.js
@@ -25,10 +29,13 @@ impl GunDb {
     /// On WASM this also calls `window.__gun_bridge.init(peers)` so that the
     /// JS GUN instance is ready before the first `get`/`put`.
     pub fn new(config: GunConfig, language: Language) -> Self {
+        log(&format!("[GunDb::new] peers={:?}, local_storage={}", config.peers, config.local_storage));
         // Serialise peer list and call JS init
         let peers_json = serde_json::to_string(&config.peers).unwrap_or_else(|_| "[]".into());
         let init_js = format!("window.__gun_bridge.init('{}')", peers_json);
-        let _ = js_sys::eval(&init_js);
+        log(&format!("[GunDb::new] Calling JS: {}", init_js));
+        let eval_result = js_sys::eval(&init_js);
+        log(&format!("[GunDb::new] init eval result: {:?}", eval_result.is_ok()));
 
         Self {
             config,
@@ -46,50 +53,73 @@ impl Db for GunDb {
         use wasm_bindgen::JsCast;
         use wasm_bindgen_futures::JsFuture;
 
+        log(&format!("[GunDb::get] path={:?}", path));
         let i18n = db_i18n(self.language);
         let path_json = serde_json::to_string(path)
             .map_err(|e| i18n.read_error(&e.to_string()))?;
 
         // window.__gun_bridge.get(pathJson) returns a Promise<string>
         let js_code = format!("window.__gun_bridge.get('{}')", path_json);
+        log(&format!("[GunDb::get] Calling JS: {}", js_code));
         let promise = js_sys::eval(&js_code)
-            .map_err(|_| i18n.read_error("eval failed"))?;
+            .map_err(|_| {
+                log("[GunDb::get] ERROR: eval failed");
+                i18n.read_error("eval failed")
+            })?;
 
         let promise = js_sys::Promise::from(promise.unchecked_into::<js_sys::Promise>());
         let result = JsFuture::from(promise).await
-            .map_err(|_| i18n.read_error("Promise rejected"))?;
+            .map_err(|_| {
+                log("[GunDb::get] ERROR: Promise rejected");
+                i18n.read_error("Promise rejected")
+            })?;
 
         let json_str = result.as_string()
             .unwrap_or_else(|| "null".into());
 
-        Ok(json_to_gun_value(&json_str))
+        log(&format!("[GunDb::get] raw result JSON: {}", &json_str[..json_str.len().min(200)]));
+        let gun_value = json_to_gun_value(&json_str);
+        log(&format!("[GunDb::get] parsed GunValue: {:?}", gun_value));
+        Ok(gun_value)
     }
 
     async fn put(&self, path: &[&str], value: GunValue) -> Result<(), String> {
         use wasm_bindgen::JsCast;
         use wasm_bindgen_futures::JsFuture;
 
+        log(&format!("[GunDb::put] path={:?}, value={:?}", path, value));
         let i18n = db_i18n(self.language);
         let path_json = serde_json::to_string(path)
             .map_err(|e| i18n.write_error(&e.to_string()))?;
         let value_json = gun_value_to_json(&value);
+        log(&format!("[GunDb::put] path_json={}, value_json={}", path_json, value_json));
 
         let js_code = format!(
             "window.__gun_bridge.put('{}', '{}')",
             path_json,
             value_json.replace('\'', "\\'")
         );
+        log(&format!("[GunDb::put] Calling JS: {}", js_code));
         let promise = js_sys::eval(&js_code)
-            .map_err(|_| i18n.write_error("eval failed"))?;
+            .map_err(|_| {
+                log("[GunDb::put] ERROR: eval failed");
+                i18n.write_error("eval failed")
+            })?;
 
         let promise = js_sys::Promise::from(promise.unchecked_into::<js_sys::Promise>());
         let result = JsFuture::from(promise).await
-            .map_err(|_| i18n.write_error("Promise rejected"))?;
+            .map_err(|_| {
+                log("[GunDb::put] ERROR: Promise rejected");
+                i18n.write_error("Promise rejected")
+            })?;
 
         let ack = result.as_string().unwrap_or_default();
+        log(&format!("[GunDb::put] ack={}", ack));
         if ack.starts_with("err:") {
+            log(&format!("[GunDb::put] ERROR: {}", &ack[4..]));
             Err(i18n.write_error(&ack[4..]))
         } else {
+            log("[GunDb::put] Success");
             Ok(())
         }
     }
@@ -99,31 +129,38 @@ impl Db for GunDb {
         path: &[&str],
         _callback: Box<dyn Fn(GunValue, String) + Send + 'static>,
     ) -> Result<u64, String> {
+        log(&format!("[GunDb::on] path={:?}", path));
         let i18n = db_i18n(self.language);
         let path_json = serde_json::to_string(path)
             .map_err(|e| i18n.subscribe_error(&e.to_string()))?;
 
         // Register JS-side subscription (returns numeric id)
         let js_code = format!("window.__gun_bridge.on('{}')", path_json);
+        log(&format!("[GunDb::on] Calling JS: {}", js_code));
         let result = js_sys::eval(&js_code)
-            .map_err(|_| i18n.subscribe_error("eval failed"))?;
+            .map_err(|_| {
+                log("[GunDb::on] ERROR: eval failed");
+                i18n.subscribe_error("eval failed")
+            })?;
 
         let sub_id = result.as_f64()
             .map(|n| n as u64)
             .unwrap_or_else(|| self.next_sub_id.fetch_add(1, Ordering::Relaxed));
 
-        // NOTE: The Rust callback is stored but must be driven by polling
-        // gun_bridge.poll(subId) from an async loop (see `poll_subscription`).
-        // A future iteration can wire this up with `setInterval` → wasm callback.
-
+        log(&format!("[GunDb::on] subscription id={}", sub_id));
         Ok(sub_id)
     }
 
     fn off(&self, subscription_id: u64) -> Result<(), String> {
+        log(&format!("[GunDb::off] subscription_id={}", subscription_id));
         let i18n = db_i18n(self.language);
         let js_code = format!("window.__gun_bridge.off({})", subscription_id);
         js_sys::eval(&js_code)
-            .map_err(|_| i18n.subscribe_error("eval failed"))?;
+            .map_err(|_| {
+                log("[GunDb::off] ERROR: eval failed");
+                i18n.subscribe_error("eval failed")
+            })?;
+        log("[GunDb::off] Done");
         Ok(())
     }
 }
@@ -145,11 +182,13 @@ impl GunDb {
         use wasm_bindgen::JsCast;
         use wasm_bindgen_futures::JsFuture;
 
+        log(&format!("[GunDb::put_signed] path={:?}, value={:?}, pub_key={}", path, value, &sea_pair.pub_key));
         let i18n = db_i18n(self.language);
         let path_json = serde_json::to_string(path)
             .map_err(|e| i18n.write_error(&e.to_string()))?;
         let value_json = gun_value_to_json(&value);
         let pair_json = sea_pair.to_json();
+        log(&format!("[GunDb::put_signed] path_json={}, value_json={}", path_json, value_json));
 
         let js_code = format!(
             "window.__gun_bridge.putSigned('{}', '{}', '{}')",
@@ -157,17 +196,27 @@ impl GunDb {
             value_json.replace('\'', "\\'"),
             pair_json.replace('\'', "\\'"),
         );
+        log(&format!("[GunDb::put_signed] Calling JS putSigned..."));
         let promise = js_sys::eval(&js_code)
-            .map_err(|_| i18n.write_error("eval failed"))?;
+            .map_err(|_| {
+                log("[GunDb::put_signed] ERROR: eval failed");
+                i18n.write_error("eval failed")
+            })?;
 
         let promise = js_sys::Promise::from(promise.unchecked_into::<js_sys::Promise>());
         let result = JsFuture::from(promise).await
-            .map_err(|_| i18n.write_error("Promise rejected"))?;
+            .map_err(|_| {
+                log("[GunDb::put_signed] ERROR: Promise rejected");
+                i18n.write_error("Promise rejected")
+            })?;
 
         let ack = result.as_string().unwrap_or_default();
+        log(&format!("[GunDb::put_signed] ack={}", ack));
         if ack.starts_with("err:") {
+            log(&format!("[GunDb::put_signed] ERROR: {}", &ack[4..]));
             Err(i18n.write_error(&ack[4..]))
         } else {
+            log("[GunDb::put_signed] Success");
             Ok(())
         }
     }
@@ -178,18 +227,28 @@ impl GunDb {
 ///
 /// Returns a vec of (data, key) pairs that arrived since the last poll.
 pub fn poll_subscription(sub_id: u64) -> Vec<(GunValue, String)> {
+    log(&format!("[poll_subscription] sub_id={}", sub_id));
     let js_code = format!("window.__gun_bridge.poll({})", sub_id);
-    let Ok(result) = js_sys::eval(&js_code) else { return vec![] };
+    let Ok(result) = js_sys::eval(&js_code) else {
+        log("[poll_subscription] eval failed");
+        return vec![];
+    };
     let json_str = result.as_string().unwrap_or_else(|| "[]".into());
+    log(&format!("[poll_subscription] raw result: {}", &json_str[..json_str.len().min(200)]));
 
-    let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&json_str) else { return vec![] };
+    let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&json_str) else {
+        log("[poll_subscription] JSON parse failed");
+        return vec![];
+    };
 
-    arr.iter().filter_map(|entry| {
+    let items: Vec<_> = arr.iter().filter_map(|entry| {
         let data_val = entry.get("data")?;
         let key = entry.get("key")?.as_str()?.to_string();
         let gun_val = serde_json_to_gun_value(data_val);
         Some((gun_val, key))
-    }).collect()
+    }).collect();
+    log(&format!("[poll_subscription] returning {} items", items.len()));
+    items
 }
 
 // ===========================================================================

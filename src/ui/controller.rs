@@ -463,6 +463,7 @@ impl AppController {
 
         // SEA keypair required for authenticated writes
         if sea_pair.is_none() {
+            log("[add_worker_action] No SEA keypair, opening modal");
             self.open_sea_modal();
             return;
         }
@@ -473,21 +474,26 @@ impl AppController {
         let mut parents_signal = self.s.network_parents;
 
         let Some(pk) = public_key else {
+            log("[add_worker_action] No public key");
             ping_status.set(Some(i18n.network_no_key().to_string()));
             return;
         };
 
+        log(&format!("[add_worker_action] Starting QR scan to add worker for pk={}", pk));
         ping_status.set(Some(i18n.scan_scanning().to_string()));
 
         spawn(async move {
             match super::qr_scanner::scan_qr().await {
                 Ok(worker_key) => {
+                    log(&format!("[add_worker_action] Scanned worker key: {}", worker_key));
                     let graph = GunNetworkGraph::new(lang, sea_pair);
                     match graph.add_worker(&pk, &worker_key).await {
                         Ok(_) => {
+                            log("[add_worker_action] Worker added successfully");
                             let i18n = ui_i18n(lang);
                             ping_status.set(Some(i18n.network_add_worker_success(&worker_key)));
                             // Reload network data
+                            log("[add_worker_action] Reloading network data...");
                             let workers = graph.get_workers(&pk).await.unwrap_or_default();
                             workers_signal.set(workers.clone());
                             let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
@@ -499,8 +505,10 @@ impl AppController {
                                 }
                             }
                             nicknames_signal.set(nicks);
+                            log("[add_worker_action] Network data reloaded");
                         }
                         Err(e) => {
+                            log(&format!("[add_worker_action] Failed to add worker: {}", e));
                             let i18n = ui_i18n(lang);
                             ping_status.set(Some(i18n.network_add_worker_error(&e)));
                         }
@@ -508,8 +516,10 @@ impl AppController {
                 }
                 Err(e) => {
                     if e == "cancelled" {
+                        log("[add_worker_action] QR scan cancelled");
                         ping_status.set(None);
                     } else {
+                        log(&format!("[add_worker_action] QR scan error: {}", e));
                         let i18n = ui_i18n(lang);
                         ping_status.set(Some(i18n.scan_error(&e)));
                     }
@@ -527,29 +537,57 @@ impl AppController {
         let mut workers_signal = self.s.network_workers;
         let mut nicknames_signal = self.s.network_nicknames;
         let mut nickname_signal = self.s.nickname;
+        let mut gun_address = self.s.gun_address;
+        let mut gun_relay_url = self.s.gun_relay_url;
 
-        let Some(pk) = public_key else { return };
+        let Some(pk) = public_key else {
+            log("[load_network_action] No public key, skipping");
+            return;
+        };
+
+        log(&format!("[load_network_action] Loading network data for pk={}", pk));
 
         spawn(async move {
             let graph = GunNetworkGraph::new(lang, sea_pair);
 
+            log("[load_network_action] Fetching ancestors...");
             let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
+            log(&format!("[load_network_action] Got {} ancestors", ancestors.len()));
             parents_signal.set(ancestors.clone());
 
+            log("[load_network_action] Fetching workers...");
             let workers = graph.get_workers(&pk).await.unwrap_or_default();
+            log(&format!("[load_network_action] Got {} workers", workers.len()));
             workers_signal.set(workers.clone());
 
+            log("[load_network_action] Fetching own nickname...");
             if let Ok(Some(nick)) = graph.get_nickname(&pk).await {
+                log(&format!("[load_network_action] Own nickname={}", nick));
                 nickname_signal.set(nick);
             }
 
+            log("[load_network_action] Fetching GUN address...");
+            if let Ok(Some(addr)) = graph.get_gun_address(&pk).await {
+                log(&format!("[load_network_action] GUN address={}", addr));
+                gun_address.set(addr);
+            }
+
+            log("[load_network_action] Fetching GUN relay URL...");
+            if let Ok(Some(url)) = graph.get_gun_relay_url(&pk).await {
+                log(&format!("[load_network_action] GUN relay URL={}", url));
+                gun_relay_url.set(url);
+            }
+
+            log("[load_network_action] Fetching nicknames for ancestors and workers...");
             let mut nicks = std::collections::HashMap::new();
             for key in ancestors.iter().chain(workers.iter()) {
                 if let Ok(Some(nick)) = graph.get_nickname(key).await {
+                    log(&format!("[load_network_action] nickname for {}={}", key, nick));
                     nicks.insert(key.clone(), nick);
                 }
             }
             nicknames_signal.set(nicks);
+            log("[load_network_action] Done");
         });
     }
 
@@ -562,20 +600,27 @@ impl AppController {
 
         // SEA keypair required for authenticated writes
         if sea_pair.is_none() {
+            log("[save_nickname_action] No SEA keypair, opening modal");
             self.open_sea_modal();
             return;
         }
 
-        let Some(pk) = public_key else { return };
+        let Some(pk) = public_key else {
+            log("[save_nickname_action] No public key");
+            return;
+        };
 
+        log(&format!("[save_nickname_action] Saving nickname '{}' for pk={}", nickname, pk));
         spawn(async move {
             let graph = GunNetworkGraph::new(lang, sea_pair);
             match graph.set_nickname(&pk, &nickname).await {
                 Ok(_) => {
+                    log("[save_nickname_action] Nickname saved successfully");
                     let i18n = ui_i18n(lang);
                     log(&i18n.nickname_saved().to_string());
                 }
                 Err(e) => {
+                    log(&format!("[save_nickname_action] Failed to save nickname: {}", e));
                     let i18n = ui_i18n(lang);
                     log(&i18n.nickname_save_error(&e));
                 }
@@ -645,6 +690,34 @@ impl AppController {
     }
 
     /// Open the SEA key generation modal.
+    /// Save the GUN relay URL to the graph database.
+    pub fn save_gun_relay_action(&self) {
+        let relay_url = self.s.gun_relay_url.read().clone();
+        let public_key = self.s.public_key.read().clone();
+        let lang = *self.s.language.read();
+        let sea_pair = self.s.sea_key_pair.read().clone();
+
+        if sea_pair.is_none() {
+            log("[save_gun_relay_action] No SEA keypair, opening modal");
+            self.open_sea_modal();
+            return;
+        }
+
+        let Some(pk) = public_key else {
+            log("[save_gun_relay_action] No public key");
+            return;
+        };
+
+        spawn(async move {
+            log(&format!("[save_gun_relay_action] Saving relay URL: {}", relay_url));
+            let graph = GunNetworkGraph::new(lang, sea_pair);
+            match graph.set_gun_relay_url(&pk, &relay_url).await {
+                Ok(_) => log("[save_gun_relay_action] Relay URL saved successfully"),
+                Err(e) => log(&format!("[save_gun_relay_action] Failed to save relay URL: {}", e)),
+            }
+        });
+    }
+
     pub fn open_sea_modal(&self) {
         let mut open = self.s.sea_modal_open;
         open.set(true);
@@ -673,15 +746,34 @@ impl AppController {
         let mut modal_open = self.s.sea_modal_open;
         let mut modal_input = self.s.sea_modal_input;
 
+        let mut gun_address = self.s.gun_address;
+        let public_key = self.s.public_key.read().clone();
+
         spawn(async move {
+            log("[generate_sea_keys] Starting SEA key generation from passphrase");
             let sea = GunSea::new(lang);
             match sea.pair_from_seed(&passphrase).await {
                 Ok(pair) => {
+                    log(&format!("[generate_sea_keys] SEA keys generated. pub_key={}", &pair.pub_key));
+                    gun_address.set(pair.pub_key.clone());
+
+                    // Store GUN address to GunDB if we have a Stellar public key
+                    if let Some(pk) = &public_key {
+                        log(&format!("[generate_sea_keys] Storing GUN address to GunDB for node {}", pk));
+                        let graph = GunNetworkGraph::new(lang, Some(pair.clone()));
+                        if let Err(e) = graph.set_gun_address(pk, &pair.pub_key).await {
+                            log(&format!("[generate_sea_keys] Failed to store GUN address: {}", e));
+                        } else {
+                            log("[generate_sea_keys] GUN address stored successfully");
+                        }
+                    }
+
                     key_pair_signal.set(Some(pair));
                     let i18n = ui_i18n(lang);
                     log(&i18n.sea_keys_generated().to_string());
                 }
                 Err(e) => {
+                    log(&format!("[generate_sea_keys] SEA key generation failed: {}", e));
                     let i18n = ui_i18n(lang);
                     log(&i18n.sea_generation_error(&e));
                 }

@@ -66,6 +66,10 @@ pub struct WalletState {
     pub network_nicknames: Signal<HashMap<String, String>>,
     /// CYF "not yet implemented" modal message (None = hidden).
     pub cyf_modal_message: Signal<Option<String>>,
+    /// GUN node address (SEA public key) — derived when SEA keys are generated.
+    pub gun_address: Signal<String>,
+    /// Optional GUN relay URL — if the user runs their own GUN DB node.
+    pub gun_relay_url: Signal<String>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -96,5 +100,7 @@ pub fn use_wallet_state() -> WalletState {
         network_workers: use_signal(Vec::new),
         network_nicknames: use_signal(HashMap::new),
         cyf_modal_message: use_signal(|| None),
+        gun_address: use_signal(String::new),
+        gun_relay_url: use_signal(String::new),
     }
 }

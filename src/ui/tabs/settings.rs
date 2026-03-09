@@ -223,6 +223,39 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             }
         }
 
+        // GUN Node Address display
+        {
+            let gun_addr = s.gun_address.read().clone();
+            rsx! {
+                if !gun_addr.is_empty() {
+                    div { style: "background: #f0f0ff; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #c0c0e0;",
+                        p { style: "font-size: 0.8em; color: #666; margin: 0 0 4px 0; font-weight: bold;", "{i18n.lbl_gun_address()}" }
+                        code { style: "word-break: break-all; font-size: 0.75em; color: #333;", "{gun_addr}" }
+                    }
+                }
+            }
+        }
+
+        // GUN Relay URL (optional)
+        div { style: "display: flex; gap: 6px; margin-top: 10px; align-items: center;",
+            input {
+                style: "flex-grow: 1; min-width: 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em;",
+                r#type: "url",
+                placeholder: "{i18n.lbl_gun_relay_ph()}",
+                value: "{s.gun_relay_url}",
+                oninput: move |evt| {
+                    let mut gun_relay_url = s.gun_relay_url;
+                    gun_relay_url.set(evt.value());
+                }
+            }
+            button {
+                style: "padding: 8px 16px; background: #6f42c1; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; white-space: nowrap;",
+                onclick: move |_| ctrl.save_gun_relay_action(),
+                "{i18n.btn_save_gun_relay()}"
+            }
+        }
+        p { style: "font-size: 0.7em; color: #888; margin: 2px 0 0 0;", "{i18n.lbl_gun_relay_url()}" }
+
         // XDR Generator Button
         button {
             style: "margin-top: 30px; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;",

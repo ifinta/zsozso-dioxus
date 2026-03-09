@@ -3,6 +3,10 @@ use super::i18n::{DbI18n, db_i18n};
 
 use serde::{Deserialize, Serialize};
 
+fn log(msg: &str) {
+    web_sys::console::log_1(&msg.into());
+}
+
 /// A SEA key pair — the four keys returned by `SEA.pair()`.
 ///
 /// * `pub_key` / `priv_key`  — ECDSA (signing)
@@ -85,6 +89,7 @@ pub struct GunSea {
 
 impl GunSea {
     pub fn new(language: Language) -> Self {
+        log(&format!("[GunSea::new] language initialized"));
         Self { language }
     }
 
@@ -94,35 +99,54 @@ impl GunSea {
         use wasm_bindgen::JsCast;
         use wasm_bindgen_futures::JsFuture;
 
+        log(&format!("[GunSea::eval_promise] JS: {}", &js_code[..js_code.len().min(200)]));
         let val = js_sys::eval(js_code)
-            .map_err(|e| format!("eval failed: {:?}", e))?;
+            .map_err(|e| {
+                log(&format!("[GunSea::eval_promise] eval failed: {:?}", e));
+                format!("eval failed: {:?}", e)
+            })?;
         let promise: js_sys::Promise = val.unchecked_into();
         let result = JsFuture::from(promise).await
-            .map_err(|e| format!("Promise rejected: {:?}", e))?;
-        Ok(result.as_string().unwrap_or_default())
+            .map_err(|e| {
+                log(&format!("[GunSea::eval_promise] Promise rejected: {:?}", e));
+                format!("Promise rejected: {:?}", e)
+            })?;
+        let s = result.as_string().unwrap_or_default();
+        log(&format!("[GunSea::eval_promise] result length={}", s.len()));
+        Ok(s)
     }
 }
 
 impl Sea for GunSea {
     async fn pair(&self) -> Result<SeaKeyPair, String> {
+        log("[GunSea::pair] Generating random SEA key pair");
         let i18n = db_i18n(self.language);
         let json = Self::eval_promise("window.__sea_bridge.pair()").await
-            .map_err(|e| i18n.sea_error(&e))?;
-        serde_json::from_str::<SeaKeyPair>(&json)
-            .map_err(|e| i18n.sea_error(&e.to_string()))
+            .map_err(|e| { log(&format!("[GunSea::pair] ERROR: {}", e)); i18n.sea_error(&e) })?;
+        log(&format!("[GunSea::pair] Got JSON response, length={}", json.len()));
+        let pair = serde_json::from_str::<SeaKeyPair>(&json)
+            .map_err(|e| { log(&format!("[GunSea::pair] Parse error: {}", e)); i18n.sea_error(&e.to_string()) })?;
+        log(&format!("[GunSea::pair] Success, pub_key={}", &pair.pub_key));
+        Ok(pair)
     }
 
     async fn pair_from_seed(&self, seed: &str) -> Result<SeaKeyPair, String> {
+        log(&format!("[GunSea::pair_from_seed] seed length={}", seed.len()));
         let i18n = db_i18n(self.language);
         let escaped_seed = seed.replace('\\', "\\\\").replace('\'', "\\'");
         let js = format!("window.__sea_bridge.pairFromSeed('{}')", escaped_seed);
+        log("[GunSea::pair_from_seed] Calling JS...");
         let json = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
-        serde_json::from_str::<SeaKeyPair>(&json)
-            .map_err(|e| i18n.sea_error(&e.to_string()))
+            .map_err(|e| { log(&format!("[GunSea::pair_from_seed] ERROR: {}", e)); i18n.sea_error(&e) })?;
+        log(&format!("[GunSea::pair_from_seed] Got JSON, length={}", json.len()));
+        let pair = serde_json::from_str::<SeaKeyPair>(&json)
+            .map_err(|e| { log(&format!("[GunSea::pair_from_seed] Parse error: {}", e)); i18n.sea_error(&e.to_string()) })?;
+        log(&format!("[GunSea::pair_from_seed] Success, pub_key={}", &pair.pub_key));
+        Ok(pair)
     }
 
     async fn sign(&self, data: &str, pair: &SeaKeyPair) -> Result<String, String> {
+        log(&format!("[GunSea::sign] data length={}, pub_key={}", data.len(), &pair.pub_key));
         let i18n = db_i18n(self.language);
         let escaped_data = data.replace('\\', "\\\\").replace('\'', "\\'");
         let pair_json = pair.to_json().replace('\\', "\\\\").replace('\'', "\\'");
@@ -131,15 +155,18 @@ impl Sea for GunSea {
             escaped_data, pair_json
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::sign] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::sign] ERROR: sign returned undefined");
             Err(i18n.sea_error("sign returned undefined"))
         } else {
+            log(&format!("[GunSea::sign] Success, result length={}", result.len()));
             Ok(result)
         }
     }
 
     async fn verify(&self, message: &str, pub_key: &str) -> Result<String, String> {
+        log(&format!("[GunSea::verify] message length={}, pub_key={}", message.len(), pub_key));
         let i18n = db_i18n(self.language);
         let escaped_msg = message.replace('\\', "\\\\").replace('\'', "\\'");
         let escaped_pub = pub_key.replace('\\', "\\\\").replace('\'', "\\'");
@@ -148,15 +175,18 @@ impl Sea for GunSea {
             escaped_msg, escaped_pub
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::verify] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::verify] ERROR: verification failed");
             Err(i18n.sea_error("verification failed"))
         } else {
+            log(&format!("[GunSea::verify] Success, result length={}", result.len()));
             Ok(result)
         }
     }
 
     async fn encrypt(&self, data: &str, pair_or_passphrase: &str) -> Result<String, String> {
+        log(&format!("[GunSea::encrypt] data length={}", data.len()));
         let i18n = db_i18n(self.language);
         let escaped_data = data.replace('\\', "\\\\").replace('\'', "\\'");
         let escaped_key = pair_or_passphrase.replace('\\', "\\\\").replace('\'', "\\'");
@@ -165,15 +195,18 @@ impl Sea for GunSea {
             escaped_data, escaped_key
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::encrypt] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::encrypt] ERROR: encrypt returned undefined");
             Err(i18n.sea_error("encrypt returned undefined"))
         } else {
+            log(&format!("[GunSea::encrypt] Success, result length={}", result.len()));
             Ok(result)
         }
     }
 
     async fn decrypt(&self, message: &str, pair_or_passphrase: &str) -> Result<String, String> {
+        log(&format!("[GunSea::decrypt] message length={}", message.len()));
         let i18n = db_i18n(self.language);
         let escaped_msg = message.replace('\\', "\\\\").replace('\'', "\\'");
         let escaped_key = pair_or_passphrase.replace('\\', "\\\\").replace('\'', "\\'");
@@ -182,15 +215,18 @@ impl Sea for GunSea {
             escaped_msg, escaped_key
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::decrypt] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::decrypt] ERROR: decrypt returned undefined");
             Err(i18n.sea_error("decrypt returned undefined"))
         } else {
+            log(&format!("[GunSea::decrypt] Success, result length={}", result.len()));
             Ok(result)
         }
     }
 
     async fn work(&self, data: &str, salt: &str) -> Result<String, String> {
+        log(&format!("[GunSea::work] data length={}, salt length={}", data.len(), salt.len()));
         let i18n = db_i18n(self.language);
         let escaped_data = data.replace('\\', "\\\\").replace('\'', "\\'");
         let escaped_salt = salt.replace('\\', "\\\\").replace('\'', "\\'");
@@ -199,15 +235,18 @@ impl Sea for GunSea {
             escaped_data, escaped_salt
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::work] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::work] ERROR: work returned undefined");
             Err(i18n.sea_error("work returned undefined"))
         } else {
+            log(&format!("[GunSea::work] Success, result length={}", result.len()));
             Ok(result)
         }
     }
 
     async fn secret(&self, other_epub: &str, my_pair: &SeaKeyPair) -> Result<String, String> {
+        log(&format!("[GunSea::secret] other_epub length={}, my pub_key={}", other_epub.len(), &my_pair.pub_key));
         let i18n = db_i18n(self.language);
         let escaped_epub = other_epub.replace('\\', "\\\\").replace('\'', "\\'");
         let pair_json = my_pair.to_json().replace('\\', "\\\\").replace('\'', "\\'");
@@ -216,10 +255,12 @@ impl Sea for GunSea {
             escaped_epub, pair_json
         );
         let result = Self::eval_promise(&js).await
-            .map_err(|e| i18n.sea_error(&e))?;
+            .map_err(|e| { log(&format!("[GunSea::secret] ERROR: {}", e)); i18n.sea_error(&e) })?;
         if result.is_empty() {
+            log("[GunSea::secret] ERROR: secret returned undefined");
             Err(i18n.sea_error("secret returned undefined"))
         } else {
+            log(&format!("[GunSea::secret] Success, result length={}", result.len()));
             Ok(result)
         }
     }

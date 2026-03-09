@@ -146,4 +146,10 @@ impl UiI18n for HungarianUi {
     fn btn_mint(&self) -> &'static str { "\u{1FA99} Kibocsátás" }
     fn btn_ok(&self) -> &'static str { "OK" }
     fn cyf_not_implemented(&self, fn_name: &str) -> String { format!("A(z) {} funkció még nincs implementálva.", fn_name) }
+
+    // GUN node address
+    fn lbl_gun_address(&self) -> &'static str { "GUN csomópont cím" }
+    fn lbl_gun_relay_url(&self) -> &'static str { "GUN Relay URL" }
+    fn lbl_gun_relay_ph(&self) -> &'static str { "https://your-server.com/gun" }
+    fn btn_save_gun_relay(&self) -> &'static str { "Mentés" }
 }

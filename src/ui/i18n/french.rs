@@ -146,4 +146,10 @@ impl UiI18n for FrenchUi {
     fn btn_mint(&self) -> &'static str { "\u{1FA99} Émettre" }
     fn btn_ok(&self) -> &'static str { "OK" }
     fn cyf_not_implemented(&self, fn_name: &str) -> String { format!("La fonction {} n'est pas encore implémentée.", fn_name) }
+
+    // GUN node address
+    fn lbl_gun_address(&self) -> &'static str { "Adresse du nœud GUN" }
+    fn lbl_gun_relay_url(&self) -> &'static str { "URL du relais GUN" }
+    fn lbl_gun_relay_ph(&self) -> &'static str { "https://your-server.com/gun" }
+    fn btn_save_gun_relay(&self) -> &'static str { "Sauvegarder" }
 }

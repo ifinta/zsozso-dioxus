@@ -21,9 +21,15 @@
      * @param {string} peersJson - JSON array of peer URLs, e.g. '["https://gun-manhattan.herokuapp.com/gun"]'
      */
     function init(peersJson) {
-        if (_gun) return; // already initialised
+        console.log("[gun_bridge.init] peersJson=", peersJson);
+        if (_gun) {
+            console.log("[gun_bridge.init] Already initialised, skipping");
+            return;
+        }
         const peers = JSON.parse(peersJson || "[]");
+        console.log("[gun_bridge.init] Creating GUN instance with peers:", peers);
         _gun = Gun({ peers: peers });
+        console.log("[gun_bridge.init] GUN instance created:", _gun ? "ok" : "null");
     }
 
     /**
@@ -32,6 +38,7 @@
      * @returns {GunInstance} - The chained reference
      */
     function _ref(path) {
+        console.log("[gun_bridge._ref] Navigating path:", path);
         let ref = _gun;
         for (const key of path) {
             ref = ref.get(key);
@@ -46,13 +53,20 @@
      * @returns {Promise<string>} - JSON-encoded value
      */
     function get(pathJson) {
+        console.log("[gun_bridge.get] pathJson=", pathJson);
         return new Promise(function (resolve) {
             const path = JSON.parse(pathJson);
+            console.log("[gun_bridge.get] Parsed path:", path);
             _ref(path).once(function (data) {
-                resolve(JSON.stringify(data === undefined ? null : data));
+                var result = JSON.stringify(data === undefined ? null : data);
+                console.log("[gun_bridge.get] .once() data:", result);
+                resolve(result);
             });
             // Safety timeout — if GUN finds nothing it may never call back
-            setTimeout(function () { resolve("null"); }, 3000);
+            setTimeout(function () {
+                console.log("[gun_bridge.get] Safety timeout fired for path:", pathJson);
+                resolve("null");
+            }, 3000);
         });
     }
 
@@ -63,18 +77,26 @@
      * @returns {Promise<string>} - "ok" or error string
      */
     function put(pathJson, valueJson) {
+        console.log("[gun_bridge.put] pathJson=", pathJson, "valueJson=", valueJson);
         return new Promise(function (resolve) {
             const path = JSON.parse(pathJson);
             const value = JSON.parse(valueJson);
+            console.log("[gun_bridge.put] Parsed path:", path, "value:", value);
             _ref(path).put(value, function (ack) {
+                console.log("[gun_bridge.put] ack:", ack);
                 if (ack.err) {
+                    console.log("[gun_bridge.put] ERROR:", ack.err);
                     resolve("err:" + ack.err);
                 } else {
+                    console.log("[gun_bridge.put] Success");
                     resolve("ok");
                 }
             });
             // Safety timeout for the ack
-            setTimeout(function () { resolve("ok"); }, 5000);
+            setTimeout(function () {
+                console.log("[gun_bridge.put] Safety timeout fired");
+                resolve("ok");
+            }, 5000);
         });
     }
 
@@ -86,6 +108,7 @@
      * @returns {number} subscription ID
      */
     function on(pathJson) {
+        console.log("[gun_bridge.on] pathJson=", pathJson);
         const path = JSON.parse(pathJson);
         const subId = _nextSubId++;
         const queue = [];
@@ -95,9 +118,11 @@
         _subscriptions[subId].ref = gunRef;
 
         gunRef.on(function (data, key) {
+            console.log("[gun_bridge.on] subId=", subId, "data:", data, "key:", key);
             queue.push(JSON.stringify({ data: data === undefined ? null : data, key: key }));
         });
 
+        console.log("[gun_bridge.on] Subscribed, subId=", subId);
         return subId;
     }
 
@@ -109,8 +134,14 @@
      */
     function poll(subId) {
         const sub = _subscriptions[subId];
-        if (!sub) return "[]";
+        if (!sub) {
+            console.log("[gun_bridge.poll] No subscription for subId=", subId);
+            return "[]";
+        }
         const items = sub.queue.splice(0);
+        if (items.length > 0) {
+            console.log("[gun_bridge.poll] subId=", subId, "items count:", items.length);
+        }
         return "[" + items.join(",") + "]";
     }
 
@@ -119,9 +150,11 @@
      * @param {number} subId
      */
     function off(subId) {
+        console.log("[gun_bridge.off] subId=", subId);
         const sub = _subscriptions[subId];
         if (sub && sub.ref) {
             sub.ref.off();
+            console.log("[gun_bridge.off] Unsubscribed");
         }
         delete _subscriptions[subId];
     }
@@ -135,22 +168,33 @@
      * @returns {Promise<string>} - "ok" or error string
      */
     async function putSigned(pathJson, valueJson, pairJson) {
+        console.log("[gun_bridge.putSigned] pathJson=", pathJson, "valueJson=", valueJson);
         var path = JSON.parse(pathJson);
         var value = JSON.parse(valueJson);
         var pair = JSON.parse(pairJson);
+        console.log("[gun_bridge.putSigned] Signing value with SEA...");
         var signed = await Gun.SEA.sign(value, pair);
+        console.log("[gun_bridge.putSigned] SEA.sign result:", signed);
         if (signed === undefined) {
+            console.log("[gun_bridge.putSigned] ERROR: SEA sign failed");
             return "err:SEA sign failed";
         }
         return new Promise(function (resolve) {
+            console.log("[gun_bridge.putSigned] Putting signed value at path:", path);
             _ref(path).put(signed, function (ack) {
+                console.log("[gun_bridge.putSigned] ack:", ack);
                 if (ack.err) {
+                    console.log("[gun_bridge.putSigned] ERROR:", ack.err);
                     resolve("err:" + ack.err);
                 } else {
+                    console.log("[gun_bridge.putSigned] Success");
                     resolve("ok");
                 }
             });
-            setTimeout(function () { resolve("ok"); }, 5000);
+            setTimeout(function () {
+                console.log("[gun_bridge.putSigned] Safety timeout fired");
+                resolve("ok");
+            }, 5000);
         });
     }
 

@@ -156,6 +156,12 @@ pub trait UiI18n {
     fn btn_mint(&self) -> &'static str;
     fn btn_ok(&self) -> &'static str;
     fn cyf_not_implemented(&self, fn_name: &str) -> String;
+
+    // GUN node address
+    fn lbl_gun_address(&self) -> &'static str;
+    fn lbl_gun_relay_url(&self) -> &'static str;
+    fn lbl_gun_relay_ph(&self) -> &'static str;
+    fn btn_save_gun_relay(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

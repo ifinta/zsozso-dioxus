@@ -13,7 +13,10 @@
     var SEA = null;
 
     function _sea() {
-        if (!SEA) { SEA = Gun.SEA; }
+        if (!SEA) {
+            SEA = Gun.SEA;
+            console.log("[sea_bridge._sea] SEA initialized:", SEA ? "ok" : "null");
+        }
         return SEA;
     }
 
@@ -23,7 +26,9 @@
      * @returns {Promise<string>}
      */
     async function pair() {
+        console.log("[sea_bridge.pair] Generating random key pair");
         var p = await _sea().pair();
+        console.log("[sea_bridge.pair] Result:", p ? "got pair, pub=" + p.pub : "null");
         return JSON.stringify(p);
     }
 
@@ -33,7 +38,9 @@
      * @returns {Promise<string>} JSON: { pub, priv, epub, epriv }
      */
     async function pairFromSeed(seed) {
+        console.log("[sea_bridge.pairFromSeed] seed length=", seed.length);
         var p = await _sea().pair(seed);
+        console.log("[sea_bridge.pairFromSeed] Result:", p ? "got pair, pub=" + p.pub : "null");
         return JSON.stringify(p);
     }
 
@@ -44,8 +51,11 @@
      * @returns {Promise<string>} - the signed message string, or "" on error
      */
     async function sign(data, pairJson) {
+        console.log("[sea_bridge.sign] data length=", data.length);
         var kp = JSON.parse(pairJson);
+        console.log("[sea_bridge.sign] Signing with pub=", kp.pub);
         var msg = await _sea().sign(data, kp);
+        console.log("[sea_bridge.sign] Result:", msg === undefined ? "undefined" : "signed");
         return (msg === undefined) ? "" : msg;
     }
 
@@ -56,7 +66,9 @@
      * @returns {Promise<string>} - the original data if valid, or "" if invalid
      */
     async function verify(message, pub_key) {
+        console.log("[sea_bridge.verify] message length=", message.length, "pub_key=", pub_key);
         var data = await _sea().verify(message, pub_key);
+        console.log("[sea_bridge.verify] Result:", data === undefined ? "invalid" : "valid");
         if (data === undefined) return "";
         return (typeof data === "string") ? data : JSON.stringify(data);
     }
@@ -68,9 +80,11 @@
      * @returns {Promise<string>} - the encrypted message string, or "" on error
      */
     async function encrypt(data, pairOrPassphrase) {
+        console.log("[sea_bridge.encrypt] data length=", data.length);
         var key;
         try { key = JSON.parse(pairOrPassphrase); } catch (e) { key = pairOrPassphrase; }
         var enc = await _sea().encrypt(data, key);
+        console.log("[sea_bridge.encrypt] Result:", enc === undefined ? "undefined" : "encrypted");
         return (enc === undefined) ? "" : enc;
     }
 
@@ -81,9 +95,11 @@
      * @returns {Promise<string>} - the decrypted plaintext, or "" on error
      */
     async function decrypt(message, pairOrPassphrase) {
+        console.log("[sea_bridge.decrypt] message length=", message.length);
         var key;
         try { key = JSON.parse(pairOrPassphrase); } catch (e) { key = pairOrPassphrase; }
         var dec = await _sea().decrypt(message, key);
+        console.log("[sea_bridge.decrypt] Result:", dec === undefined ? "undefined" : "decrypted");
         if (dec === undefined) return "";
         return (typeof dec === "string") ? dec : JSON.stringify(dec);
     }
@@ -95,9 +111,11 @@
      * @returns {Promise<string>} - the derived hash, or "" on error
      */
     async function work(data, saltJson) {
+        console.log("[sea_bridge.work] data length=", data.length, "salt length=", saltJson.length);
         var salt;
         try { salt = JSON.parse(saltJson); } catch (e) { salt = saltJson; }
         var hash = await _sea().work(data, salt);
+        console.log("[sea_bridge.work] Result:", hash === undefined ? "undefined" : "hash computed");
         return (hash === undefined) ? "" : hash;
     }
 
@@ -108,8 +126,10 @@
      * @returns {Promise<string>} - the shared secret string, or "" on error
      */
     async function secret(otherEpub, myPairJson) {
+        console.log("[sea_bridge.secret] otherEpub length=", otherEpub.length);
         var myPair = JSON.parse(myPairJson);
         var sec = await _sea().secret(otherEpub, myPair);
+        console.log("[sea_bridge.secret] Result:", sec === undefined ? "undefined" : "secret derived");
         return (sec === undefined) ? "" : sec;
     }
 
