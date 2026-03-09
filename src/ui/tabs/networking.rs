@@ -33,20 +33,6 @@ pub fn render_networking_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI
 
     rsx! {
         div { style: "padding: 0 20px;",
-            // Ping button
-            button {
-                style: "width: 100%; margin-top: 20px; padding: 14px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em;",
-                onclick: move |_| ctrl.ping_contract_action(),
-                "{i18n.btn_ping()}"
-            }
-
-            // Status display
-            if !ping_display.is_empty() {
-                p { style: "text-align: center; margin-top: 12px; font-size: 0.95em; color: #495057; font-style: italic; padding: 0;",
-                    "{ping_display}"
-                }
-            }
-
             // Parents section
             h3 { style: "margin-top: 24px; margin-bottom: 8px; color: #28a745; font-size: 1em;",
                 "{i18n.lbl_parents()}"
@@ -68,8 +54,22 @@ pub fn render_networking_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI
                 }
             }
 
+            // Ping button (between Parents and Workers)
+            button {
+                style: "width: 100%; margin-top: 12px; margin-bottom: 12px; padding: 14px 0; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1em;",
+                onclick: move |_| ctrl.ping_contract_action(),
+                "{i18n.btn_ping()}"
+            }
+
+            // Status display
+            if !ping_display.is_empty() {
+                p { style: "text-align: center; margin-top: 0; margin-bottom: 12px; font-size: 0.95em; color: #495057; font-style: italic; padding: 0;",
+                    "{ping_display}"
+                }
+            }
+
             // Workers section
-            h3 { style: "margin-top: 24px; margin-bottom: 8px; color: #007bff; font-size: 1em;",
+            h3 { style: "margin-top: 12px; margin-bottom: 8px; color: #007bff; font-size: 1em;",
                 "{i18n.lbl_workers()}"
             }
             for worker_key in workers.iter() {

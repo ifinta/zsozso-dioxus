@@ -1,5 +1,5 @@
 use crate::i18n::Language;
-use super::gundb::{Db, GunDb, GunConfig, GunValue};
+use super::gundb::{Db, GunDb, GunConfig, GunValue, SeaKeyPair};
 
 /// Maximum length for a user nickname displayed on network buttons.
 pub const MAX_NICKNAME_LEN: usize = 16;
@@ -37,16 +37,26 @@ pub trait NetworkGraph {
 /// Concrete implementation backed by the GUN decentralised database.
 pub struct GunNetworkGraph {
     db: GunDb,
+    sea_pair: Option<SeaKeyPair>,
 }
 
 impl GunNetworkGraph {
-    pub fn new(language: Language) -> Self {
+    pub fn new(language: Language, sea_pair: Option<SeaKeyPair>) -> Self {
         let config = GunConfig {
             peers: vec![],
             local_storage: true,
         };
         Self {
             db: GunDb::new(config, language),
+            sea_pair,
+        }
+    }
+
+    /// Write helper — uses SEA-signed put. Requires a keypair.
+    async fn authenticated_put(&self, path: &[&str], value: GunValue) -> Result<(), String> {
+        match &self.sea_pair {
+            Some(pair) => self.db.put_signed(path, value, pair).await,
+            None => Err("SEA keypair required for authenticated writes".to_string()),
         }
     }
 }
@@ -92,25 +102,25 @@ impl NetworkGraph for GunNetworkGraph {
 
     async fn set_nickname(&self, node_key: &str, nickname: &str) -> Result<(), String> {
         let trimmed: String = nickname.chars().take(MAX_NICKNAME_LEN).collect();
-        self.db.put(
+        self.authenticated_put(
             &["network", node_key, "nickname"],
             GunValue::Text(trimmed),
         ).await
     }
 
     async fn add_worker(&self, node_key: &str, worker_key: &str) -> Result<(), String> {
-        self.db.put(
+        self.authenticated_put(
             &["network", node_key, "workers", worker_key],
             GunValue::Bool(true),
         ).await?;
-        self.db.put(
+        self.authenticated_put(
             &["network", worker_key, "parent"],
             GunValue::Text(node_key.to_string()),
         ).await
     }
 
     async fn request_modify(&self, node_key: &str, field: &str, value: &str) -> Result<(), String> {
-        self.db.put(
+        self.authenticated_put(
             &["network", node_key, "requests", field],
             GunValue::Text(value.to_string()),
         ).await

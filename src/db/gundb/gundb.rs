@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::i18n::Language;
 use super::{Db, GunConfig, GunValue};
 use super::i18n::{DbI18n, db_i18n};
+use super::sea::SeaKeyPair;
 
 /// GUN-compatible graph database.
 ///
@@ -124,6 +125,51 @@ impl Db for GunDb {
         js_sys::eval(&js_code)
             .map_err(|_| i18n.subscribe_error("eval failed"))?;
         Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SEA-authenticated writes
+// ---------------------------------------------------------------------------
+impl GunDb {
+    /// Write a value signed with a SEA key pair.
+    ///
+    /// Calls `window.__gun_bridge.putSigned(path, value, pair)` which signs
+    /// the value with `Gun.SEA.sign` before storing it.
+    pub async fn put_signed(
+        &self,
+        path: &[&str],
+        value: GunValue,
+        sea_pair: &SeaKeyPair,
+    ) -> Result<(), String> {
+        use wasm_bindgen::JsCast;
+        use wasm_bindgen_futures::JsFuture;
+
+        let i18n = db_i18n(self.language);
+        let path_json = serde_json::to_string(path)
+            .map_err(|e| i18n.write_error(&e.to_string()))?;
+        let value_json = gun_value_to_json(&value);
+        let pair_json = sea_pair.to_json();
+
+        let js_code = format!(
+            "window.__gun_bridge.putSigned('{}', '{}', '{}')",
+            path_json,
+            value_json.replace('\'', "\\'"),
+            pair_json.replace('\'', "\\'"),
+        );
+        let promise = js_sys::eval(&js_code)
+            .map_err(|_| i18n.write_error("eval failed"))?;
+
+        let promise = js_sys::Promise::from(promise.unchecked_into::<js_sys::Promise>());
+        let result = JsFuture::from(promise).await
+            .map_err(|_| i18n.write_error("Promise rejected"))?;
+
+        let ack = result.as_string().unwrap_or_default();
+        if ack.starts_with("err:") {
+            Err(i18n.write_error(&ack[4..]))
+        } else {
+            Ok(())
+        }
     }
 }
 

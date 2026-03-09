@@ -126,11 +126,40 @@
         delete _subscriptions[subId];
     }
 
+    /**
+     * gun.get(path).put(SEA.sign(value, pair)) — write with SEA signature.
+     * Signs the value with the provided SEA key pair before storing.
+     * @param {string} pathJson - JSON array of keys
+     * @param {string} valueJson - JSON-encoded value to write
+     * @param {string} pairJson - JSON SEA key pair { pub, priv, epub, epriv }
+     * @returns {Promise<string>} - "ok" or error string
+     */
+    async function putSigned(pathJson, valueJson, pairJson) {
+        var path = JSON.parse(pathJson);
+        var value = JSON.parse(valueJson);
+        var pair = JSON.parse(pairJson);
+        var signed = await Gun.SEA.sign(value, pair);
+        if (signed === undefined) {
+            return "err:SEA sign failed";
+        }
+        return new Promise(function (resolve) {
+            _ref(path).put(signed, function (ack) {
+                if (ack.err) {
+                    resolve("err:" + ack.err);
+                } else {
+                    resolve("ok");
+                }
+            });
+            setTimeout(function () { resolve("ok"); }, 5000);
+        });
+    }
+
     // Expose on window
     window.__gun_bridge = {
         init: init,
         get: get,
         put: put,
+        putSigned: putSigned,
         on: on,
         poll: poll,
         off: off,

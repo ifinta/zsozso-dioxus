@@ -23,7 +23,7 @@ pub fn render_cyf_tab(s: WalletState, i18n: &dyn UiI18n) -> Element {
             }
 
             // White canvas with coin + balance
-            div { style: "flex: 1; background: white; border-radius: 12px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 120px;",
+            div { style: "background: white; border-radius: 12px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; padding: 16px 24px;",
 
                 // Coin image (SVG)
                 div { style: "flex-shrink: 0; margin-right: 24px;",

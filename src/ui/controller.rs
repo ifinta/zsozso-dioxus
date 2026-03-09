@@ -459,6 +459,14 @@ impl AppController {
         let lang = *self.s.language.read();
         let i18n = ui_i18n(lang);
         let public_key = self.s.public_key.read().clone();
+        let sea_pair = self.s.sea_key_pair.read().clone();
+
+        // SEA keypair required for authenticated writes
+        if sea_pair.is_none() {
+            self.open_sea_modal();
+            return;
+        }
+
         let mut ping_status = self.s.ping_status;
         let mut workers_signal = self.s.network_workers;
         let mut nicknames_signal = self.s.network_nicknames;
@@ -474,7 +482,7 @@ impl AppController {
         spawn(async move {
             match super::qr_scanner::scan_qr().await {
                 Ok(worker_key) => {
-                    let graph = GunNetworkGraph::new(lang);
+                    let graph = GunNetworkGraph::new(lang, sea_pair);
                     match graph.add_worker(&pk, &worker_key).await {
                         Ok(_) => {
                             let i18n = ui_i18n(lang);
@@ -514,6 +522,7 @@ impl AppController {
     pub fn load_network_action(&self) {
         let public_key = self.s.public_key.read().clone();
         let lang = *self.s.language.read();
+        let sea_pair = self.s.sea_key_pair.read().clone();
         let mut parents_signal = self.s.network_parents;
         let mut workers_signal = self.s.network_workers;
         let mut nicknames_signal = self.s.network_nicknames;
@@ -522,7 +531,7 @@ impl AppController {
         let Some(pk) = public_key else { return };
 
         spawn(async move {
-            let graph = GunNetworkGraph::new(lang);
+            let graph = GunNetworkGraph::new(lang, sea_pair);
 
             let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
             parents_signal.set(ancestors.clone());
@@ -549,11 +558,18 @@ impl AppController {
         let nickname = self.s.nickname.read().clone();
         let public_key = self.s.public_key.read().clone();
         let lang = *self.s.language.read();
+        let sea_pair = self.s.sea_key_pair.read().clone();
+
+        // SEA keypair required for authenticated writes
+        if sea_pair.is_none() {
+            self.open_sea_modal();
+            return;
+        }
 
         let Some(pk) = public_key else { return };
 
         spawn(async move {
-            let graph = GunNetworkGraph::new(lang);
+            let graph = GunNetworkGraph::new(lang, sea_pair);
             match graph.set_nickname(&pk, &nickname).await {
                 Ok(_) => {
                     let i18n = ui_i18n(lang);
