@@ -2,18 +2,24 @@
 /**
  * bundle_sw.js — Embed all build assets into sw.js as base64 data.
  *
- * Usage:  node bundle_sw.js <source-folder> <deploy-folder>
+ * Usage:  node bundle_sw.js <source-folder> <deploy-folder> [base-path]
  *
- * Reads every file in <source-folder> (recursively) except sw.js,
- * base64-encodes them (including index.html), and produces:
+ * Arguments:
+ *   source-folder  Build output (e.g. dist/app/)
+ *   deploy-folder  Root of deploy tree (e.g. deploy/)
+ *   base-path      Optional sub-path the app is served under, e.g. "app"
+ *                   or "profil".  When given, output goes to
+ *                   <deploy-folder>/<base>/ and the SW strips the /<base>/
+ *                   prefix from request URLs.  When omitted, output goes
+ *                   directly to <deploy-folder>/ with no stripping.
  *
- * Output (written to <deploy-folder>/app/):
+ * Examples:
+ *   node bundle_sw.js dist/app deploy app    →  deploy/app/sw.js  (served at /app/)
+ *   node bundle_sw.js dist/app deploy        →  deploy/sw.js      (served at /)
+ *
+ * Output:
  *   sw.js       — original sw.js + ALL embedded assets + fetch handler
  *   index.html  — bootloader that installs the SW then reloads
- *
- * On first visit the bootloader registers sw.js, waits for it to control
- * the page, then reloads. The SW then serves the real index.html (and
- * all other assets) from embedded base64 data — no cache, no network.
  */
 
 const fs   = require('fs');
@@ -22,9 +28,11 @@ const path = require('path');
 // ── CLI args ─────────────────────────────────────────────────────────────────
 const srcFolder    = process.argv[2];
 const deployFolder = process.argv[3];
+const basePath     = (process.argv[4] || '').replace(/^\/|\/$/g, ''); // strip slashes
+const basePrefix   = basePath ? '/' + basePath + '/' : '/';
 
 if (!srcFolder || !deployFolder) {
-    console.error('Usage: node bundle_sw.js <source-folder> <deploy-folder>');
+    console.error('Usage: node bundle_sw.js <source-folder> <deploy-folder> [base-path]');
     process.exit(1);
 }
 
@@ -160,6 +168,9 @@ function _serve404(pathname) {
     });
 }
 
+// Baked-in base path prefix for stripping (set by bundle_sw.js).
+var __BASE_PREFIX = '${basePrefix}';
+
 self.addEventListener('fetch', function(event) {
     var url = new URL(event.request.url);
 
@@ -171,14 +182,14 @@ self.addEventListener('fetch', function(event) {
         return;
     }
 
-    // Extract relative path from the SW scope
-    var scope = self.registration.scope;
-    var scopePath = new URL(scope).pathname;
+    // Strip the base prefix to get the embedded-asset key.
+    // Example: base="/app/", pathname="/app/assets/foo.js" → "assets/foo.js"
     var relative = url.pathname;
-    if (relative.startsWith(scopePath)) {
-        relative = relative.substring(scopePath.length);
+    if (__BASE_PREFIX !== '/' && relative.startsWith(__BASE_PREFIX)) {
+        relative = relative.substring(__BASE_PREFIX.length);
+    } else if (relative.startsWith('/')) {
+        relative = relative.substring(1);
     }
-    if (relative.startsWith('/')) relative = relative.substring(1);
 
     var resp = _serveEmbedded(relative);
     if (resp) { event.respondWith(resp); return; }
@@ -193,12 +204,12 @@ self.addEventListener('fetch', function(event) {
 });
 `;
 
-// ── Write output to <deploy-folder>/app/ ─────────────────────────────────────
-const appFolder = path.join(deployFolder, 'app');
-fs.mkdirSync(appFolder, { recursive: true });
+// ── Write output ─────────────────────────────────────────────────────────────
+const outFolder = basePath ? path.join(deployFolder, basePath) : deployFolder;
+fs.mkdirSync(outFolder, { recursive: true });
 
 const outputSw = swContent + embeddedBlock;
-fs.writeFileSync(path.join(appFolder, 'sw.js'), outputSw, 'utf8');
+fs.writeFileSync(path.join(outFolder, 'sw.js'), outputSw, 'utf8');
 
 // ── Generate bootloader index.html ───────────────────────────────────────────
 // On first visit (no SW controller), this registers the SW, waits for it to
@@ -241,14 +252,15 @@ if('serviceWorker' in navigator){
 } else { document.body.innerHTML='<p>Service Workers are not supported in this browser.</p>'; }
 </script></body></html>`;
 
-fs.writeFileSync(path.join(appFolder, 'index.html'), bootloader, 'utf8');
+fs.writeFileSync(path.join(outFolder, 'index.html'), bootloader, 'utf8');
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 const outputSize = Buffer.byteLength(outputSw, 'utf8');
 console.log(`Bundled ${allFiles.length} files into sw.js`);
+console.log(`  Base path: ${basePath ? '/' + basePath + '/' : '/ (root)'}`);
 console.log(`  Raw assets: ${(totalRaw / 1024).toFixed(1)} KB`);
 console.log(`  Output sw.js: ${(outputSize / 1024).toFixed(1)} KB`);
-console.log(`  Deploy folder: ${appFolder}/`);
+console.log(`  Deploy folder: ${outFolder}/`);
 console.log('');
 for (const relPath of allFiles) {
     const size = fs.statSync(path.join(srcFolder, relPath)).size;
