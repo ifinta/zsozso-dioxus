@@ -7,7 +7,10 @@
 <body><div style="text-align:center"><div class="spinner" style="margin:0 auto 16px"></div><p>Loading app…</p></div>
 <script>
 if ('serviceWorker' in navigator) {
-  if (navigator.serviceWorker.controller) {
+  // Ensure trailing slash so the URL is within the SW scope
+  if (window.location.pathname.slice(-1) !== '/') {
+    window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+  } else if (navigator.serviceWorker.controller) {
     window.location.reload();
   } else {
     var reloading = false;
