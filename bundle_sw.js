@@ -230,7 +230,7 @@ if('serviceWorker' in navigator){
     // Safety fallback: reload once.
     window.location.reload();
   } else {
-    navigator.serviceWorker.register('sw.js',{scope:'./'}).then(function(reg){
+    navigator.serviceWorker.register('${basePrefix}sw.js',{scope:'${basePrefix}'}).then(function(reg){
       var sw=reg.installing||reg.waiting||reg.active;
       if(!sw){window.location.reload();return}
       if(sw.state==='activated'){
