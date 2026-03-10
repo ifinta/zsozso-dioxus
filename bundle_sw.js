@@ -226,25 +226,24 @@ const bootloader = `<!DOCTYPE html>
 <script>
 if('serviceWorker' in navigator){
   if(navigator.serviceWorker.controller){
-    // SW already controls — should not happen (SW serves real index.html).
-    // Safety fallback: reload once.
     window.location.reload();
   } else {
+    // Listen for controllerchange BEFORE registering — so we never miss it
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      window.location.reload();
+    });
     navigator.serviceWorker.register('${basePrefix}sw.js',{scope:'${basePrefix}'}).then(function(reg){
+      // If already active+controlling, controllerchange already fired — force reload
+      if(navigator.serviceWorker.controller){window.location.reload();return}
       var sw=reg.installing||reg.waiting||reg.active;
       if(!sw){window.location.reload();return}
       if(sw.state==='activated'){
-        // Activated but not controlling yet — wait for claim
-        navigator.serviceWorker.addEventListener('controllerchange',function(){
-          window.location.reload();
-        });
+        // activated but not yet controlling — claim() is in flight, controllerchange will fire
         return;
       }
       sw.addEventListener('statechange',function(){
-        if(sw.state==='activated'){
-          navigator.serviceWorker.addEventListener('controllerchange',function(){
-            window.location.reload();
-          });
+        if(sw.state==='activated' && navigator.serviceWorker.controller){
+          window.location.reload();
         }
       });
     });
