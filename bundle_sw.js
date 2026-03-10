@@ -4,13 +4,16 @@
  *
  * Usage:  node bundle_sw.js <source-folder> <deploy-folder>
  *
- * Reads every file in <source-folder> (recursively) except sw.js and
- * index.html, base64-encodes them, and produces a new sw.js that serves
- * everything from memory — no cache API, no network fetch required.
+ * Reads every file in <source-folder> (recursively) except sw.js,
+ * base64-encodes them (including index.html), and produces:
  *
- * Output (written to <deploy-folder>/):
- *   sw.js       — original sw.js + embedded assets + fetch handler
- *   index.html  — copied as-is
+ * Output (written to <deploy-folder>/app/):
+ *   sw.js       — original sw.js + ALL embedded assets + fetch handler
+ *   index.html  — bootloader that installs the SW then reloads
+ *
+ * On first visit the bootloader registers sw.js, waits for it to control
+ * the page, then reloads. The SW then serves the real index.html (and
+ * all other assets) from embedded base64 data — no cache, no network.
  */
 
 const fs   = require('fs');
@@ -30,8 +33,9 @@ if (!fs.existsSync(srcFolder)) {
     process.exit(1);
 }
 
-// ── Mime type map (only the types present in the build output) ────────────────
+// ── Mime type map ────────────────────────────────────────────────────────────
 const MIME_BY_EXT = {
+    '.html':  'text/html',
     '.ico':   'image/x-icon',
     '.png':   'image/png',
     '.js':    'application/javascript',
@@ -54,7 +58,8 @@ function walkDir(dir, base) {
     return results;
 }
 
-const SKIP = new Set(['sw.js', 'index.html']);
+// Only skip sw.js — index.html IS embedded so the SW can serve it
+const SKIP = new Set(['sw.js']);
 const allFiles = walkDir(srcFolder, '')
     .filter(f => !SKIP.has(f));
 
@@ -72,7 +77,6 @@ function removeFetchListener(code) {
     const idx = code.indexOf(marker);
     if (idx === -1) return code;
 
-    // Count parentheses to find the matching close of addEventListener(...)
     let depth = 0;
     let started = false;
     let end = idx;
@@ -83,7 +87,6 @@ function removeFetchListener(code) {
             if (started && depth === 0) {
                 end = i + 1;
                 if (code[end] === ';') end++;
-                // Trim trailing blank lines
                 while (end < code.length && (code[end] === '\n' || code[end] === '\r')) end++;
                 break;
             }
@@ -104,7 +107,6 @@ for (const relPath of allFiles) {
     const buf      = fs.readFileSync(absPath);
     const ext      = path.extname(relPath).toLowerCase();
     const mime     = MIME_BY_EXT[ext] || 'application/octet-stream';
-    // Use forward slashes as keys (even on Windows)
     const key      = relPath.split(path.sep).join('/');
 
     assets[key]    = buf.toString('base64');
@@ -128,11 +130,46 @@ function _b64ToArrayBuffer(b64) {
     return bytes.buffer;
 }
 
+function _serveEmbedded(key) {
+    var data = __EMBEDDED_ASSETS[key];
+    if (!data) return null;
+    var mime = __EMBEDDED_MIME[key] || 'application/octet-stream';
+    return new Response(_b64ToArrayBuffer(data), {
+        status: 200,
+        headers: { 'Content-Type': mime }
+    });
+}
+
+function _serve404(pathname) {
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+        + '<meta name="viewport" content="width=device-width,initial-scale=1.0">'
+        + '<title>404 — Not Found</title>'
+        + '<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'
+        + 'font-family:sans-serif;background:#f5f5f5;color:#333;text-align:center}'
+        + 'h1{font-size:4em;margin:0;color:#dc3545}p{color:#666;margin:8px 0}'
+        + 'a{color:#17a2b8;text-decoration:none;font-weight:bold}'
+        + '</style></head><body><div>'
+        + '<h1>404</h1>'
+        + '<p>The requested resource was not found.</p>'
+        + '<p style="font-size:0.85em;font-family:monospace;word-break:break-all">' + pathname + '</p>'
+        + '<p style="margin-top:24px"><a href="./">← Back to app</a></p>'
+        + '</div></body></html>';
+    return new Response(html, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+}
+
 self.addEventListener('fetch', function(event) {
     var url = new URL(event.request.url);
 
-    // Navigation requests → let the browser fetch index.html from the server
-    if (event.request.mode === 'navigate') return;
+    // Navigation requests → serve embedded index.html
+    if (event.request.mode === 'navigate') {
+        var resp = _serveEmbedded('index.html');
+        if (resp) { event.respondWith(resp); return; }
+        event.respondWith(_serve404(url.pathname));
+        return;
+    }
 
     // Extract relative path from the SW scope
     var scope = self.registration.scope;
@@ -141,42 +178,77 @@ self.addEventListener('fetch', function(event) {
     if (relative.startsWith(scopePath)) {
         relative = relative.substring(scopePath.length);
     }
-    // Strip leading slash
     if (relative.startsWith('/')) relative = relative.substring(1);
 
-    var data = __EMBEDDED_ASSETS[relative];
-    if (data) {
-        var mime = __EMBEDDED_MIME[relative] || 'application/octet-stream';
-        event.respondWith(new Response(_b64ToArrayBuffer(data), {
-            status: 200,
-            headers: { 'Content-Type': mime }
-        }));
+    var resp = _serveEmbedded(relative);
+    if (resp) { event.respondWith(resp); return; }
+
+    // Not embedded and same-origin — return 404
+    if (url.origin === self.location.origin) {
+        event.respondWith(_serve404(url.pathname));
         return;
     }
 
-    // Not embedded — fall through to normal network fetch
-    // (covers external CDN scripts, API calls, etc.)
+    // Cross-origin — fall through to normal network fetch
 });
 `;
 
-// ── Write output ─────────────────────────────────────────────────────────────
-fs.mkdirSync(deployFolder, { recursive: true });
+// ── Write output to <deploy-folder>/app/ ─────────────────────────────────────
+const appFolder = path.join(deployFolder, 'app');
+fs.mkdirSync(appFolder, { recursive: true });
 
 const outputSw = swContent + embeddedBlock;
-fs.writeFileSync(path.join(deployFolder, 'sw.js'), outputSw, 'utf8');
+fs.writeFileSync(path.join(appFolder, 'sw.js'), outputSw, 'utf8');
 
-// Copy index.html as-is
-const indexSrc = path.join(srcFolder, 'index.html');
-if (fs.existsSync(indexSrc)) {
-    fs.copyFileSync(indexSrc, path.join(deployFolder, 'index.html'));
-}
+// ── Generate bootloader index.html ───────────────────────────────────────────
+// On first visit (no SW controller), this registers the SW, waits for it to
+// take control, then reloads. The SW then serves the real index.html from
+// embedded data.  On subsequent visits the SW already controls the page and
+// serves the real index.html directly — the bootloader is never seen.
+const bootloader = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Loading…</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#f5f5f5;color:#333}
+.spinner{width:40px;height:40px;border:4px solid #ddd;border-top-color:#17a2b8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}</style></head>
+<body><div style="text-align:center"><div class="spinner" style="margin:0 auto 16px"></div><p>Loading app…</p></div>
+<script>
+if('serviceWorker' in navigator){
+  if(navigator.serviceWorker.controller){
+    // SW already controls — should not happen (SW serves real index.html).
+    // Safety fallback: reload once.
+    window.location.reload();
+  } else {
+    navigator.serviceWorker.register('sw.js',{scope:'./'}).then(function(reg){
+      var sw=reg.installing||reg.waiting||reg.active;
+      if(!sw){window.location.reload();return}
+      if(sw.state==='activated'){
+        // Activated but not controlling yet — wait for claim
+        navigator.serviceWorker.addEventListener('controllerchange',function(){
+          window.location.reload();
+        });
+        return;
+      }
+      sw.addEventListener('statechange',function(){
+        if(sw.state==='activated'){
+          navigator.serviceWorker.addEventListener('controllerchange',function(){
+            window.location.reload();
+          });
+        }
+      });
+    });
+  }
+} else { document.body.innerHTML='<p>Service Workers are not supported in this browser.</p>'; }
+</script></body></html>`;
+
+fs.writeFileSync(path.join(appFolder, 'index.html'), bootloader, 'utf8');
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 const outputSize = Buffer.byteLength(outputSw, 'utf8');
 console.log(`Bundled ${allFiles.length} files into sw.js`);
 console.log(`  Raw assets: ${(totalRaw / 1024).toFixed(1)} KB`);
 console.log(`  Output sw.js: ${(outputSize / 1024).toFixed(1)} KB`);
-console.log(`  Deploy folder: ${deployFolder}/`);
+console.log(`  Deploy folder: ${appFolder}/`);
 console.log('');
 for (const relPath of allFiles) {
     const size = fs.statSync(path.join(srcFolder, relPath)).size;
