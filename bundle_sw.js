@@ -224,31 +224,30 @@ const bootloader = `<!DOCTYPE html>
 @keyframes spin{to{transform:rotate(360deg)}}</style></head>
 <body><div style="text-align:center"><div class="spinner" style="margin:0 auto 16px"></div><p>Loading app…</p></div>
 <script>
-if('serviceWorker' in navigator){
-  if(navigator.serviceWorker.controller){
+if ('serviceWorker' in navigator) {
+  if (navigator.serviceWorker.controller) {
     window.location.reload();
   } else {
-    // Listen for controllerchange BEFORE registering — so we never miss it
-    navigator.serviceWorker.addEventListener('controllerchange',function(){
+    var reloading = false;
+    function doReload() {
+      if (reloading) return;
+      reloading = true;
       window.location.reload();
-    });
-    navigator.serviceWorker.register('${basePrefix}sw.js',{scope:'${basePrefix}'}).then(function(reg){
-      // If already active+controlling, controllerchange already fired — force reload
-      if(navigator.serviceWorker.controller){window.location.reload();return}
-      var sw=reg.installing||reg.waiting||reg.active;
-      if(!sw){window.location.reload();return}
-      if(sw.state==='activated'){
-        // activated but not yet controlling — claim() is in flight, controllerchange will fire
-        return;
-      }
-      sw.addEventListener('statechange',function(){
-        if(sw.state==='activated' && navigator.serviceWorker.controller){
-          window.location.reload();
-        }
-      });
-    });
+    }
+
+    // Primary: listen for controllerchange event
+    navigator.serviceWorker.addEventListener('controllerchange', doReload);
+
+    // Fallback: poll every 100ms in case controllerchange was missed
+    setInterval(function() {
+      if (navigator.serviceWorker.controller) doReload();
+    }, 100);
+
+    navigator.serviceWorker.register('${basePrefix}sw.js', { scope: '${basePrefix}' });
   }
-} else { document.body.innerHTML='<p>Service Workers are not supported in this browser.</p>'; }
+} else {
+  document.body.innerHTML = '<p>Service Workers are not supported in this browser.</p>';
+}
 </script></body></html>`;
 
 fs.writeFileSync(path.join(outFolder, 'index.html'), bootloader, 'utf8');
