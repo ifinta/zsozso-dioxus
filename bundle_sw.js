@@ -2,12 +2,16 @@
 /**
  * bundle_sw.js — Bundle all build assets into a service-worker deployment.
  *
- * Usage:  node bundle_sw.js [-z] <source-folder> <deploy-folder> [base-path]
+ * Usage:  node bundle_sw.js [-z|-c] <source-folder> <deploy-folder> [base-path]
  *
  * Flags:
- *   -z             Compressed mode — assets stored in a separate gzipped JSON
- *                   file (assets.json.gz) instead of inline in sw.js.
- *                   The SW fetches and decompresses it during install.
+ *   -z             External compressed mode — assets stored in a separate
+ *                   gzipped JSON file (assets.json.gz).  The SW fetches and
+ *                   decompresses it during install.  Output: 3 files.
+ *   -c             Inline compressed mode — each file is individually gzipped
+ *                   then base64-encoded inside sw.js.  The SW decompresses
+ *                   each asset on demand when serving.  Output: 2 files.
+ *                   Smaller sw.js than plain inline, no extra fetch needed.
  *
  * Arguments:
  *   source-folder  Build output (e.g. dist/app/)
@@ -19,17 +23,21 @@
  *                   directly to <deploy-folder>/ with no stripping.
  *
  * Examples:
- *   node bundle_sw.js dist/app deploy app       →  deploy/app/{sw.js, index.html}  (inline, ~5 MB sw.js)
- *   node bundle_sw.js -z dist/app deploy app    →  deploy/app/{sw.js, index.html, assets.json.gz}  (compressed)
- *   node bundle_sw.js dist/app deploy           →  deploy/{sw.js, index.html}  (served at /)
+ *   node bundle_sw.js dist/app deploy app       →  inline       (~5.4 MB sw.js)
+ *   node bundle_sw.js -c dist/app deploy app    →  inline+gzip  (~2.7 MB sw.js)
+ *   node bundle_sw.js -z dist/app deploy app    →  external gz  (~7 KB sw.js + ~2.1 MB assets.json.gz)
  *
  * Output (inline mode, default):
- *   sw.js       — original sw.js + ALL embedded assets + fetch handler
+ *   sw.js       — original sw.js + ALL assets as raw base64 + fetch handler
  *   index.html  — bootloader that installs the SW then reloads
  *
- * Output (compressed mode, -z):
- *   sw.js           — original sw.js logic + asset-loading fetch handler (~15 KB)
- *   assets.json.gz  — gzipped JSON with all base64-encoded assets (~60% of inline)
+ * Output (inline compressed mode, -c):
+ *   sw.js       — original sw.js + ALL assets as gzip+base64 + fetch handler
+ *   index.html  — bootloader that installs the SW then reloads
+ *
+ * Output (external compressed mode, -z):
+ *   sw.js           — original sw.js logic + asset-loading fetch handler
+ *   assets.json.gz  — gzipped JSON with all base64-encoded assets
  *   index.html      — bootloader that installs the SW then reloads
  */
 
@@ -38,17 +46,24 @@ const path = require('path');
 const zlib = require('zlib');
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
-const rawArgs     = process.argv.slice(2);
-const compressed  = rawArgs.includes('-z');
-const positional  = rawArgs.filter(a => a !== '-z');
+const rawArgs       = process.argv.slice(2);
+const modeExternal  = rawArgs.includes('-z');
+const modeCompact   = rawArgs.includes('-c');
+const positional    = rawArgs.filter(a => a !== '-z' && a !== '-c');
 
 const srcFolder    = positional[0];
 const deployFolder = positional[1];
 const basePath     = (positional[2] || '').replace(/^\/|\/$/g, ''); // strip slashes
 const basePrefix   = basePath ? '/' + basePath + '/' : '/';
+// mode label used in generated code comments and summary
+const modeName     = modeExternal ? 'external-gz' : modeCompact ? 'inline-gz' : 'inline';
 
 if (!srcFolder || !deployFolder) {
-    console.error('Usage: node bundle_sw.js [-z] <source-folder> <deploy-folder> [base-path]');
+    console.error('Usage: node bundle_sw.js [-z|-c] <source-folder> <deploy-folder> [base-path]');
+    process.exit(1);
+}
+if (modeExternal && modeCompact) {
+    console.error('Error: -z and -c are mutually exclusive');
     process.exit(1);
 }
 
@@ -123,8 +138,10 @@ swContent = removeFetchListener(swContent);
 
 // ── Build the ASSETS and MIME objects ────────────────────────────────────────
 const assets = {};
+const compactAssets = {};  // gzip+base64 per file (used by -c mode)
 const mimeTypes = {};
 let totalRaw = 0;
+let totalCompact = 0;
 
 for (const relPath of allFiles) {
     const absPath  = path.join(srcFolder, relPath);
@@ -136,6 +153,12 @@ for (const relPath of allFiles) {
     assets[key]    = buf.toString('base64');
     mimeTypes[key] = mime;
     totalRaw      += buf.length;
+
+    if (modeCompact) {
+        const gzBuf = zlib.gzipSync(buf, { level: 9 });
+        compactAssets[key] = gzBuf.toString('base64');
+        totalCompact += gzBuf.length;
+    }
 }
 
 // ── Shared helper functions (used in both modes) ─────────────────────────────
@@ -173,19 +196,23 @@ function _serve404(pathname) {
 }
 
 function generateFetchHandler(prefix) {
+    // Navigation and sub-resource serving — sync for inline/compact, async for external
+    const isAsync = modeExternal;
     return `
 // Baked-in base path prefix for stripping (set by bundle_sw.js).
 var __BASE_PREFIX = '${prefix}';
 
 self.addEventListener('fetch', function(event) {
     var url = new URL(event.request.url);
-${compressed ? `
-    // Let the asset bundle pass through to network (needed for lazy reload)
+${modeExternal ? `
+    // Let the asset bundle pass through to network
     if (url.origin === self.location.origin && url.pathname.endsWith('assets.json.gz')) return;
 ` : ''}
     // Navigation requests → serve embedded index.html
     if (event.request.mode === 'navigate') {
-        ${compressed ? 'event.respondWith(_loadAssets().then(function() { return _serveEmbedded(\'index.html\') || _serve404(url.pathname); }));' : 'var resp = _serveEmbedded(\'index.html\');\n        if (resp) { event.respondWith(resp); return; }\n        event.respondWith(_serve404(url.pathname));'}
+        ${isAsync
+            ? "event.respondWith(_loadAssets().then(function() { return _serveEmbedded('index.html') || _serve404(url.pathname); }));"
+            : "var resp = _serveEmbedded('index.html');\n        if (resp) { event.respondWith(resp); return; }\n        event.respondWith(_serve404(url.pathname));"}
         return;
     }
 
@@ -201,7 +228,7 @@ ${compressed ? `
         relative = relative.substring(1);
     }
 
-    ${compressed
+    ${isAsync
         ? `event.respondWith(
         _loadAssets().then(function() {
             return _serveEmbedded(relative) || _serve404(url.pathname);
@@ -261,16 +288,14 @@ fs.mkdirSync(outFolder, { recursive: true });
 
 let outputSw;
 
-if (compressed) {
-    // ── Compressed mode (-z): assets in separate gzipped JSON file ────────────
+if (modeExternal) {
+    // ── External compressed mode (-z): assets in separate gzipped JSON file ──
 
-    // Write assets.json.gz
     const assetsJson = JSON.stringify({ assets, mime: mimeTypes });
     const gzipped = zlib.gzipSync(Buffer.from(assetsJson, 'utf8'), { level: 9 });
     fs.writeFileSync(path.join(outFolder, 'assets.json.gz'), gzipped);
 
-    // Build sw.js with lazy asset loader
-    const compressedBlock = `
+    const externalBlock = `
 // ── Asset loader (generated by bundle_sw.js -z) ─────────────────────────────
 
 var __ASSETS = null;
@@ -304,10 +329,39 @@ function _serveEmbedded(key) {
 }
 ${generateServeHelpers()}${generateFetchHandler(basePrefix)}`;
 
-    outputSw = swContent + compressedBlock;
+    outputSw = swContent + externalBlock;
+
+} else if (modeCompact) {
+    // ── Inline compressed mode (-c): per-file gzip+base64 inside sw.js ───────
+
+    const compactBlock = `
+// ── Embedded assets — per-file gzip+base64 (generated by bundle_sw.js -c) ───
+
+const __EMBEDDED_ASSETS = ${JSON.stringify(compactAssets)};
+
+const __EMBEDDED_MIME = ${JSON.stringify(mimeTypes)};
+
+function _serveEmbedded(key) {
+    var data = __EMBEDDED_ASSETS[key];
+    if (!data) return null;
+    var mime = __EMBEDDED_MIME[key] || 'application/octet-stream';
+    // Decompress: base64 → gzip bytes → DecompressionStream → raw bytes
+    var gzBuf = _b64ToArrayBuffer(data);
+    var ds = new DecompressionStream('gzip');
+    var writer = ds.writable.getWriter();
+    writer.write(new Uint8Array(gzBuf));
+    writer.close();
+    return new Response(ds.readable, {
+        status: 200,
+        headers: { 'Content-Type': mime }
+    });
+}
+${generateServeHelpers()}${generateFetchHandler(basePrefix)}`;
+
+    outputSw = swContent + compactBlock;
 
 } else {
-    // ── Inline mode (default): assets embedded directly in sw.js ─────────────
+    // ── Inline mode (default): raw base64 assets inside sw.js ────────────────
 
     const inlineBlock = `
 // ── Embedded assets (generated by bundle_sw.js) ──────────────────────────────
@@ -337,14 +391,17 @@ fs.writeFileSync(path.join(outFolder, 'index.html'), generateBootloader(basePref
 
 // ── Summary ──────────────────────────────────────────────────────────────────
 const swSize = Buffer.byteLength(outputSw, 'utf8');
-const mode = compressed ? 'compressed (-z)' : 'inline';
-console.log(`Bundled ${allFiles.length} files — ${mode} mode`);
+const modeLabel = modeExternal ? 'external-gz (-z)' : modeCompact ? 'inline-gz (-c)' : 'inline';
+console.log(`Bundled ${allFiles.length} files — ${modeLabel} mode`);
 console.log(`  Base path: ${basePath ? '/' + basePath + '/' : '/ (root)'}`);
 console.log(`  Raw assets: ${(totalRaw / 1024).toFixed(1)} KB`);
 console.log(`  Output sw.js: ${(swSize / 1024).toFixed(1)} KB`);
-if (compressed) {
+if (modeExternal) {
     const gzSize = fs.statSync(path.join(outFolder, 'assets.json.gz')).size;
     console.log(`  Output assets.json.gz: ${(gzSize / 1024).toFixed(1)} KB`);
+}
+if (modeCompact) {
+    console.log(`  Compressed assets: ${(totalCompact / 1024).toFixed(1)} KB (${(100 * totalCompact / totalRaw).toFixed(0)}% of raw)`);
 }
 console.log(`  Deploy folder: ${outFolder}/`);
 console.log('');

@@ -15,11 +15,12 @@
 set -euo pipefail
 
 DRY=false
-COMPRESS=""
+BUNDLE_FLAG=""
 for arg in "$@"; do
   case "$arg" in
     --dry) DRY=true ;;
-    -z)    COMPRESS="-z" ;;
+    -z)    BUNDLE_FLAG="-z" ;;
+    -c)    BUNDLE_FLAG="-c" ;;
   esac
 done
 
@@ -53,8 +54,8 @@ sed -i "s|window.__APP_VERSION = '.*'|window.__APP_VERSION = '${CACHE_NAME}'|" "
 echo "Stamped ${DIST_DIR}/index.html"
 
 # ── 5. Bundle for deployment ─────────────────────────────────────────────────
-echo "Running: node bundle_sw.js ${COMPRESS} ${DIST_DIR} deploy app"
-node bundle_sw.js ${COMPRESS} "${DIST_DIR}" deploy app
+echo "Running: node bundle_sw.js ${BUNDLE_FLAG} ${DIST_DIR} deploy app"
+node bundle_sw.js ${BUNDLE_FLAG} "${DIST_DIR}" deploy app
 
 echo ""
 echo "✓ Build complete — CACHE_NAME: ${CACHE_NAME}"
