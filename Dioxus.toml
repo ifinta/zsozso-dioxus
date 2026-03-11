@@ -6,4 +6,4 @@
 [web.app]
 # Az /app/ prefix kell, mert a szerveren https://zsozso.info/app/ alatt fut.
 # Enélkül a generált <script> tag /./assets/... lenne /app/assets/... helyett.
-base_path = "app"
+base_path = "zsozso-dioxus"

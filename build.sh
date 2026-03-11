@@ -45,6 +45,9 @@ mkdir -p "${DIST_DIR}/assets"
 cp -r "${DX_OUT}/." "${DIST_DIR}/"
 rm -rf "${DX_OUT}"
 
+# Copy root static assets into dist (in CI there is no persistent dist/)
+cp sw.js manifest.json favicon.ico icon-192.png icon-512.png "${DIST_DIR}/"
+
 # ── 4. Stamp CACHE_NAME ──────────────────────────────────────────────────────
 sed -i "s|^const CACHE_NAME = '.*';|const CACHE_NAME = '${CACHE_NAME}';|" "${DIST_DIR}/sw.js"
 echo "Stamped ${DIST_DIR}/sw.js"
