@@ -74,9 +74,22 @@ assets/
 ├── qr_scanner_bridge.js     # QR scanner bridge using wascan (window.__qr_scanner_bridge)
 ├── log_bridge.js            # In-app log ring buffer — captures console.log/error + SW logs + upload
 ├── manifest.json            # PWA manifest
-├── sw.js                    # Service Worker — offline caching, update detection, log forwarding
 ├── icon-192.png             # PWA icon 192×192
 └── icon-512.png             # PWA icon 512×512
+
+(root — static files and build tooling)
+├── sw.js                    # Base Service Worker — offline caching, update detection, log forwarding
+├── gun.js                   # GUN library
+├── sea.js                   # GUN SEA crypto library
+├── wascan.js                # QR scanner WASM module (JS glue)
+├── wascan_bg.wasm           # QR scanner WASM binary
+├── gun_bridge.js            # GUN bridge (copied to dist/ by build.sh)
+├── sea_bridge.js            # SEA bridge (copied to dist/ by build.sh)
+├── passkey_bridge.js        # Passkey bridge (copied to dist/ by build.sh)
+├── qr_scanner_bridge.js     # QR scanner bridge (copied to dist/ by build.sh)
+├── log_bridge.js            # Log bridge (copied to dist/ by build.sh)
+├── bundle_sw.js             # Node.js bundling script — creates offline PWA deployment
+└── build.sh                 # Build pipeline: dx build → stamp CACHE_NAME → copy statics → bundle
 
 server/
 ├── nginx.conf               # Main nginx configuration
@@ -132,6 +145,54 @@ The SW (`sw.js`) handles offline caching and version management:
 - A toast (in `index.html`) polls `window.__ZSOZSO_UPDATE_READY` and shows a manual "Refresh" button when an update is detected
 - The SW also forwards its own log entries to the main page via `postMessage`, visible in the Log tab
 
+### Bundled Offline Deployment (bundle_sw.js)
+
+For GitHub Pages and similar static hosting, `bundle_sw.js` creates a fully
+self-contained deployment from the `dist/` build output. The result is just
+two physical files: `index.html` and `sw.js`.
+
+**How it works (JSON-in-HTML mode, `-j` flag):**
+
+1. All files in `dist/` are gzip-compressed and base64-encoded
+2. A bootloader `index.html` is generated that registers the SW and shows a
+   loading spinner
+3. The actual app `index.html` (from `dist/`) is itself gzip+base64 encoded
+   and embedded in the bootloader — it contains all the asset entries
+4. On SW `install`, assets are decoded from the embedded JSON map and stored
+   in CacheStorage
+5. On `activate`, the SW intercepts all fetch requests and serves from cache
+6. PWA metadata (manifest, icons) is embedded as data URIs in the bootloader
+   so PWA install works even before the SW activates
+
+**Modifier flags:**
+
+| Flag | Purpose |
+|------|---------|
+| `-j` | JSON-in-HTML bundling (assets embedded in SW) |
+| `-dioxus` | SPA routing — all navigation → `index.html` (no multi-page resolution) |
+| `-logging` | Injects log ring buffer + forwarding into SW |
+| `-raw` | Copy manifest/icons as physical files instead of embedding as data URIs |
+
+**Build pipeline (`build.sh`):**
+
+```bash
+# 1. Stamp CACHE_NAME with date+time+commit into sw.js
+# 2. dx build --release --platform web
+# 3. Stage build output to dist/zsozso-dioxus/
+# 4. Copy root static files (sw.js, gun.js, sea.js, wascan.js, ...) into dist/
+# 5. Run: node bundle_sw.js dist/zsozso-dioxus -j -dioxus -logging
+# 6. Output: deploy/zsozso-dioxus/{index.html, sw.js}
+```
+
+**GitHub Pages deployment:**
+
+The `.github/workflows/deploy.yml` workflow runs `build.sh` on push to `main`
+and deploys `deploy/zsozso-dioxus/` as a GitHub Pages artifact.
+
+To enable: repo Settings → Pages → Source → GitHub Actions.
+
+Live: https://ifinta.github.io/zsozso-dioxus/
+
 ### Internationalization (i18n) Traits
 
 Every user-facing string in the application is abstracted behind i18n traits, with factory functions selecting the correct implementation based on the active `Language`. Each module owns its own i18n layer:
@@ -184,47 +245,34 @@ cd zsozso-dioxus
 # Development server with hot-reload
 dx serve --platform web
 
-# Release build
-dx build --release --platform web --features web
-# Output in target/dx/zsozso/release/web/public/
+# Full release build + bundled offline deployment
+./build.sh
+# Output:
+#   dist/zsozso-dioxus/   — traditional deployment (all files)
+#   deploy/zsozso-dioxus/ — bundled offline deployment (index.html + sw.js only)
 
-# Serve the release build locally
-python3 -m http.server 8080 -d target/dx/zsozso/release/web/public/
-# Or with npx:
-npx serve target/dx/zsozso/release/web/public/ -l 8080
+# Serve the bundled deployment locally:
+npx serve deploy/ -l 8080
+# → http://localhost:8080/zsozso-dioxus/
+
+# Serve the traditional deployment locally:
+npx serve dist/ -l 8080
+# → http://localhost:8080/zsozso-dioxus/
 ```
 ## Deployment
 
-```
-/var/www/html/app/
-├── index.html (from build output)
-├── sw.js (from assets/ or from project root)
-├── manifest.json (from assets/ or from project root)
-├── icon-192.png (from assets/ or from project root)
-├── icon-512.png (from assets/ or from project root)
-├── <... other files ...> (from assets/ or from project root)
-└── assets/
-    ├── zsozso-dxh*.js (from build output)
-    └── zsozso_bg-dxh*.wasm (from build output)
-```
+See the "Bundled Offline Deployment" section above for details on `bundle_sw.js`.
 
-```bash
-# build.sh stamps a fresh CACHE_NAME (date+time) into assets/sw.js, runs dx build,
-# and copies the output into dist/app/ — so CACHE_NAME is always up-to-date.
-./build.sh
+### Traditional (nginx / static server)
 
-# Serve locally:
-npx serve dist/ -l 8080
-# → http://localhost:8080/app/
-```
+Copy the contents of `dist/zsozso-dioxus/` to your web server root.
 
-**IMPORTANT — Service Worker versioning:**
-`build.sh` automatically stamps a date+time and the git commit into CACHE_NAME (e.g. `zsozso-v0.20250308.1430-a2356fc0`)
-into `assets/sw.js` before building. This guarantees the browser detects every
-new deployment as an update and clears the old cache.
+### GitHub Pages (bundled offline)
 
-**Never deploy manually edited dist files** — always run `./build.sh` so the source
-and the deployed artifact stay in sync.
+Automatic via `.github/workflows/deploy.yml` — pushes to `main` build and
+deploy `deploy/zsozso-dioxus/` as a GitHub Pages artifact.
+
+Live: https://ifinta.github.io/zsozso-dioxus/
 
 ```bash
 # Dry run — print what CACHE_NAME would be used, without building:
@@ -245,10 +293,11 @@ A PWA allows users to "install" the app directly from the browser to their home 
 
 The project includes PWA support out of the box via the following files:
 
-- **`assets/manifest.json`** — PWA manifest with app metadata, icons, and display settings
-- **`assets/sw.js`** — Service Worker for offline caching of assets
+- **`manifest.json`** (in `assets/`) — PWA manifest with app metadata, icons, and display settings
+- **`sw.js`** (in repo root) — Base Service Worker for offline caching of assets
 - **`index.html`** — Includes PWA meta tags, manifest link, and service worker registration
-- **`assets/icon-192.png` and `assets/icon-512.png`** — App icons (placeholders, replace with custom designs)
+- **`icon-192.png` and `icon-512.png`** (in `assets/`) — App icons
+- **`bundle_sw.js`** (in repo root) — Node.js script that creates bundled offline deployments
 
 ### How Users Install It
 
@@ -258,4 +307,11 @@ The project includes PWA support out of the box via the following files:
 
 ### Offline Support
 
-The service worker caches critical assets on first visit, allowing the app to work offline. When online, it automatically fetches fresh content while serving cached versions as fallback.
+In **bundled mode** (GitHub Pages deployment), the entire app is embedded inside
+the service worker. All assets are available offline from the very first visit —
+no network requests are needed after the initial page load. The bootloader HTML
+registers the SW, which unpacks all assets into CacheStorage and serves them on
+subsequent requests.
+
+In **traditional mode** (nginx deployment), the SW caches assets on first visit
+and serves from cache on subsequent requests, with network fallback for updates.

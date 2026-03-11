@@ -24,6 +24,7 @@ ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hie
 
 - [zsozso.info](https://zsozso.info) — Project website & whitepaper
 - [the PWA App](https://zsozso.info/app) — A running version of this App
+- [the PWA App on GitHub Pages](https://ifinta.github.io/zsozso-dioxus/) — A GitHub Pages deployment
 - [github](https://github.com/ifinta/zsozso-webpage) — Project website & whitepaper on the github
 - [ZSOZSO on Stellar Expert](https://stellar.expert/explorer/public/asset/ZSOZSO-GDZKLEYJ54QUIEYE4DUUOCIJDUS7R5MDW5MCAB3XTUGPJ3C7SSZJRQUC) — ZSOZSO asset on mainnet
 
