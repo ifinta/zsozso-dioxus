@@ -19,8 +19,7 @@ BUNDLE_FLAG=""
 for arg in "$@"; do
   case "$arg" in
     --dry) DRY=true ;;
-    -z)    BUNDLE_FLAG="-z" ;;
-    -c)    BUNDLE_FLAG="-c" ;;
+    -z|-c|-j|-r) BUNDLE_FLAG="$arg" ;;
   esac
 done
 

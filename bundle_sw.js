@@ -2,43 +2,30 @@
 /**
  * bundle_sw.js — Bundle all build assets into a service-worker deployment.
  *
- * Usage:  node bundle_sw.js [-z|-c] <source-folder> <deploy-folder> [base-path]
+ * Usage:  node bundle_sw.js [-z|-c|-j|-r] <source-folder> <deploy-folder> [base-path]
  *
- * Flags:
- *   -z             External compressed mode — assets stored in a separate
- *                   gzipped JSON file (assets.json.gz).  The SW fetches and
- *                   decompresses it during install.  Output: 3 files.
- *   -c             Inline compressed mode — each file is individually gzipped
- *                   then base64-encoded inside sw.js.  The SW decompresses
- *                   each asset on demand when serving.  Output: 2 files.
- *                   Smaller sw.js than plain inline, no extra fetch needed.
+ * Flags (mutually exclusive — pick one, or omit for plain inline):
+ *   (none)  Inline mode      — raw base64 assets inside sw.js.  Output: 2 files.
+ *   -c      Compact mode     — per-file gzip+base64 inside sw.js.  Output: 2 files.
+ *   -z      External mode    — gzipped JSON in assets.json.gz.  Output: 3 files.
+ *   -j      JSON-in-HTML     — assets in a <script type="application/json"> tag
+ *                               inside index.html.  SW fetches + parses it.
+ *                               Output: 2 files (index.html + sw.js).
+ *   -r      Remark-in-HTML   — assets in an HTML comment inside index.html.
+ *                               SW fetches + extracts between markers.
+ *                               Output: 2 files (index.html + sw.js).
  *
  * Arguments:
  *   source-folder  Build output (e.g. dist/app/)
  *   deploy-folder  Root of deploy tree (e.g. deploy/)
  *   base-path      Optional sub-path the app is served under, e.g. "app"
- *                   or "profil".  When given, output goes to
- *                   <deploy-folder>/<base>/ and the SW strips the /<base>/
- *                   prefix from request URLs.  When omitted, output goes
- *                   directly to <deploy-folder>/ with no stripping.
  *
  * Examples:
  *   node bundle_sw.js dist/app deploy app       →  inline       (~5.4 MB sw.js)
- *   node bundle_sw.js -c dist/app deploy app    →  inline+gzip  (~2.7 MB sw.js)
- *   node bundle_sw.js -z dist/app deploy app    →  external gz  (~7 KB sw.js + ~2.1 MB assets.json.gz)
- *
- * Output (inline mode, default):
- *   sw.js       — original sw.js + ALL assets as raw base64 + fetch handler
- *   index.html  — bootloader that installs the SW then reloads
- *
- * Output (inline compressed mode, -c):
- *   sw.js       — original sw.js + ALL assets as gzip+base64 + fetch handler
- *   index.html  — bootloader that installs the SW then reloads
- *
- * Output (external compressed mode, -z):
- *   sw.js           — original sw.js logic + asset-loading fetch handler
- *   assets.json.gz  — gzipped JSON with all base64-encoded assets
- *   index.html      — bootloader that installs the SW then reloads
+ *   node bundle_sw.js -c dist/app deploy app    →  compact      (~2.2 MB sw.js)
+ *   node bundle_sw.js -z dist/app deploy app    →  external     (~7 KB sw.js + ~2.1 MB .gz)
+ *   node bundle_sw.js -j dist/app deploy app    →  json-in-html (~2.2 MB index.html + ~7 KB sw.js)
+ *   node bundle_sw.js -r dist/app deploy app    →  remark-html  (~2.2 MB index.html + ~7 KB sw.js)
  */
 
 const fs   = require('fs');
@@ -46,24 +33,27 @@ const path = require('path');
 const zlib = require('zlib');
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
+const FLAGS = ['-z', '-c', '-j', '-r'];
 const rawArgs       = process.argv.slice(2);
 const modeExternal  = rawArgs.includes('-z');
 const modeCompact   = rawArgs.includes('-c');
-const positional    = rawArgs.filter(a => a !== '-z' && a !== '-c');
+const modeJson      = rawArgs.includes('-j');
+const modeRemark    = rawArgs.includes('-r');
+const positional    = rawArgs.filter(a => !FLAGS.includes(a));
+
+const activeFlags = FLAGS.filter(f => rawArgs.includes(f));
+if (activeFlags.length > 1) {
+    console.error(`Error: flags ${activeFlags.join(', ')} are mutually exclusive — pick one`);
+    process.exit(1);
+}
 
 const srcFolder    = positional[0];
 const deployFolder = positional[1];
-const basePath     = (positional[2] || '').replace(/^\/|\/$/g, ''); // strip slashes
+const basePath     = (positional[2] || '').replace(/^\/|\/$/g, '');
 const basePrefix   = basePath ? '/' + basePath + '/' : '/';
-// mode label used in generated code comments and summary
-const modeName     = modeExternal ? 'external-gz' : modeCompact ? 'inline-gz' : 'inline';
 
 if (!srcFolder || !deployFolder) {
-    console.error('Usage: node bundle_sw.js [-z|-c] <source-folder> <deploy-folder> [base-path]');
-    process.exit(1);
-}
-if (modeExternal && modeCompact) {
-    console.error('Error: -z and -c are mutually exclusive');
+    console.error('Usage: node bundle_sw.js [-z|-c|-j|-r] <source-folder> <deploy-folder> [base-path]');
     process.exit(1);
 }
 
@@ -138,10 +128,11 @@ swContent = removeFetchListener(swContent);
 
 // ── Build the ASSETS and MIME objects ────────────────────────────────────────
 const assets = {};
-const compactAssets = {};  // gzip+base64 per file (used by -c mode)
+const compactAssets = {};  // gzip+base64 per file (used by -c, -j, -r modes)
 const mimeTypes = {};
 let totalRaw = 0;
 let totalCompact = 0;
+const usePerFileGzip = modeCompact || modeJson || modeRemark;
 
 for (const relPath of allFiles) {
     const absPath  = path.join(srcFolder, relPath);
@@ -154,7 +145,7 @@ for (const relPath of allFiles) {
     mimeTypes[key] = mime;
     totalRaw      += buf.length;
 
-    if (modeCompact) {
+    if (usePerFileGzip) {
         const gzBuf = zlib.gzipSync(buf, { level: 9 });
         compactAssets[key] = gzBuf.toString('base64');
         totalCompact += gzBuf.length;
@@ -196,8 +187,8 @@ function _serve404(pathname) {
 }
 
 function generateFetchHandler(prefix) {
-    // Navigation and sub-resource serving — sync for inline/compact, async for external
-    const isAsync = modeExternal;
+    // -z, -j, -r modes load assets asynchronously; inline/-c serve synchronously
+    const isAsync = modeExternal || modeJson || modeRemark;
     return `
 // Baked-in base path prefix for stripping (set by bundle_sw.js).
 var __BASE_PREFIX = '${prefix}';
@@ -282,13 +273,134 @@ if ('serviceWorker' in navigator) {
 </script></body></html>`;
 }
 
+// ── Markers used by -j and -r modes ──────────────────────────────────────────
+const MARKER_START = '__EMBEDDED_ASSETS_START__';
+const MARKER_END   = '__EMBEDDED_ASSETS_END__';
+
 // ── Output ───────────────────────────────────────────────────────────────────
 const outFolder = basePath ? path.join(deployFolder, basePath) : deployFolder;
 fs.mkdirSync(outFolder, { recursive: true });
 
 let outputSw;
+let outputHtml;
 
-if (modeExternal) {
+// ── Shared SW asset-loader for -j and -r (fetches index.html, extracts data)
+function generateHtmlLoader(prefix, extractExpr) {
+    return `
+// ── Asset loader (generated by bundle_sw.js) ─────────────────────────────────
+
+var __ASSETS = null;
+
+async function _loadAssets() {
+    if (__ASSETS) return;
+    LOG('Loading assets from index.html …');
+    var resp = await fetch('${prefix}index.html', { cache: 'no-cache' });
+    if (!resp.ok) throw new Error('Failed to load index.html: ' + resp.status);
+    var html = await resp.text();
+${extractExpr}
+    LOG('Assets loaded:', Object.keys(__ASSETS.assets).length, 'files');
+}
+
+// Eagerly load assets during install
+self.addEventListener('install', function(event) {
+    event.waitUntil(_loadAssets());
+});
+
+function _serveEmbedded(key) {
+    if (!__ASSETS) return null;
+    var data = __ASSETS.assets[key];
+    if (!data) return null;
+    var mime = __ASSETS.mime[key] || 'application/octet-stream';
+    // Decompress: base64 → gzip bytes → DecompressionStream → raw bytes
+    var gzBuf = _b64ToArrayBuffer(data);
+    var ds = new DecompressionStream('gzip');
+    var writer = ds.writable.getWriter();
+    writer.write(new Uint8Array(gzBuf));
+    writer.close();
+    return new Response(ds.readable, {
+        status: 200,
+        headers: { 'Content-Type': mime }
+    });
+}
+`;
+}
+
+// ── Bootloader that also carries asset data
+function generateDataBootloader(prefix, dataSection) {
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Loading…</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:#f5f5f5;color:#333}
+.spinner{width:40px;height:40px;border:4px solid #ddd;border-top-color:#17a2b8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}</style></head>
+<body><div style="text-align:center"><div class="spinner" style="margin:0 auto 16px"></div><p>Loading app…</p></div>
+${dataSection}
+<script>
+if ('serviceWorker' in navigator) {
+  if (window.location.pathname.slice(-1) !== '/') {
+    window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+  } else if (navigator.serviceWorker.controller) {
+    window.location.reload();
+  } else {
+    var reloading = false;
+    function doReload() {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', doReload);
+    setInterval(function() {
+      if (navigator.serviceWorker.controller) doReload();
+    }, 100);
+    navigator.serviceWorker.register('${prefix}sw.js', { scope: '${prefix}' });
+  }
+} else {
+  document.body.innerHTML = '<p>Service Workers are not supported in this browser.</p>';
+}
+</script></body></html>`;
+}
+
+if (modeJson) {
+    // ── JSON-in-HTML mode (-j): assets in <script type="application/json"> ───
+
+    const jsonPayload = JSON.stringify({ assets: compactAssets, mime: mimeTypes });
+
+    const dataSection = `<script type="application/json" id="${MARKER_START}">\n${jsonPayload}\n</script>`;
+
+    outputHtml = generateDataBootloader(basePrefix, dataSection);
+
+    const extractExpr = `    var el = html.indexOf('id="${MARKER_START}"');
+    if (el === -1) throw new Error('Asset tag not found in index.html');
+    var start = html.indexOf('>', el) + 1;
+    var end = html.indexOf('</script>', start);
+    __ASSETS = JSON.parse(html.substring(start, end));`;
+
+    const swBlock = generateHtmlLoader(basePrefix, extractExpr)
+        + generateServeHelpers() + generateFetchHandler(basePrefix);
+    outputSw = swContent + swBlock;
+
+} else if (modeRemark) {
+    // ── Remark-in-HTML mode (-r): assets in HTML comment with markers ─────────
+
+    const jsonPayload = JSON.stringify({ assets: compactAssets, mime: mimeTypes });
+
+    const dataSection = `<!-- ${MARKER_START}\n${jsonPayload}\n${MARKER_END} -->`;
+
+    outputHtml = generateDataBootloader(basePrefix, dataSection);
+
+    const extractExpr = `    var startMarker = '${MARKER_START}\\n';
+    var endMarker = '\\n${MARKER_END}';
+    var start = html.indexOf(startMarker);
+    if (start === -1) throw new Error('Asset comment not found in index.html');
+    start += startMarker.length;
+    var end = html.indexOf(endMarker, start);
+    __ASSETS = JSON.parse(html.substring(start, end));`;
+
+    const swBlock = generateHtmlLoader(basePrefix, extractExpr)
+        + generateServeHelpers() + generateFetchHandler(basePrefix);
+    outputSw = swContent + swBlock;
+
+} else if (modeExternal) {
     // ── External compressed mode (-z): assets in separate gzipped JSON file ──
 
     const assetsJson = JSON.stringify({ assets, mime: mimeTypes });
@@ -330,6 +442,7 @@ function _serveEmbedded(key) {
 ${generateServeHelpers()}${generateFetchHandler(basePrefix)}`;
 
     outputSw = swContent + externalBlock;
+    outputHtml = generateBootloader(basePrefix);
 
 } else if (modeCompact) {
     // ── Inline compressed mode (-c): per-file gzip+base64 inside sw.js ───────
@@ -359,6 +472,7 @@ function _serveEmbedded(key) {
 ${generateServeHelpers()}${generateFetchHandler(basePrefix)}`;
 
     outputSw = swContent + compactBlock;
+    outputHtml = generateBootloader(basePrefix);
 
 } else {
     // ── Inline mode (default): raw base64 assets inside sw.js ────────────────
@@ -382,25 +496,27 @@ function _serveEmbedded(key) {
 ${generateServeHelpers()}${generateFetchHandler(basePrefix)}`;
 
     outputSw = swContent + inlineBlock;
+    outputHtml = generateBootloader(basePrefix);
 }
 
 fs.writeFileSync(path.join(outFolder, 'sw.js'), outputSw, 'utf8');
-
-// ── Write bootloader ─────────────────────────────────────────────────────────
-fs.writeFileSync(path.join(outFolder, 'index.html'), generateBootloader(basePrefix), 'utf8');
+fs.writeFileSync(path.join(outFolder, 'index.html'), outputHtml, 'utf8');
 
 // ── Summary ──────────────────────────────────────────────────────────────────
-const swSize = Buffer.byteLength(outputSw, 'utf8');
-const modeLabel = modeExternal ? 'external-gz (-z)' : modeCompact ? 'inline-gz (-c)' : 'inline';
+const swSize   = Buffer.byteLength(outputSw, 'utf8');
+const htmlSize = Buffer.byteLength(outputHtml, 'utf8');
+const LABELS = { z: 'external-gz (-z)', c: 'inline-gz (-c)', j: 'json-in-html (-j)', r: 'remark-html (-r)' };
+const modeLabel = activeFlags.length ? LABELS[activeFlags[0].slice(1)] : 'inline';
 console.log(`Bundled ${allFiles.length} files — ${modeLabel} mode`);
 console.log(`  Base path: ${basePath ? '/' + basePath + '/' : '/ (root)'}`);
 console.log(`  Raw assets: ${(totalRaw / 1024).toFixed(1)} KB`);
 console.log(`  Output sw.js: ${(swSize / 1024).toFixed(1)} KB`);
+console.log(`  Output index.html: ${(htmlSize / 1024).toFixed(1)} KB`);
 if (modeExternal) {
     const gzSize = fs.statSync(path.join(outFolder, 'assets.json.gz')).size;
     console.log(`  Output assets.json.gz: ${(gzSize / 1024).toFixed(1)} KB`);
 }
-if (modeCompact) {
+if (usePerFileGzip) {
     console.log(`  Compressed assets: ${(totalCompact / 1024).toFixed(1)} KB (${(100 * totalCompact / totalRaw).toFixed(0)}% of raw)`);
 }
 console.log(`  Deploy folder: ${outFolder}/`);
