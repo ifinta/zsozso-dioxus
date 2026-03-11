@@ -53,10 +53,10 @@ sed -i "s|window.__APP_VERSION = '.*'|window.__APP_VERSION = '${CACHE_NAME}'|" "
 echo "Stamped ${DIST_DIR}/index.html"
 
 # ── 5. Bundle for deployment ─────────────────────────────────────────────────
-echo "Running: node bundle_sw.js ${BUNDLE_FLAG} ${DIST_DIR} deploy app"
-node bundle_sw.js ${BUNDLE_FLAG} "${DIST_DIR}" deploy app
+echo "Running: node bundle_sw.js ${BUNDLE_FLAG} -dioxus -logging ${DIST_DIR} deploy zsozso-dioxus"
+node bundle_sw.js ${BUNDLE_FLAG} -dioxus -logging "${DIST_DIR}" deploy zsozso-dioxus
 
 echo ""
 echo "✓ Build complete — CACHE_NAME: ${CACHE_NAME}"
-echo "  Deploy from: deploy/app/"
-echo "  Test:        npx serve deploy/ -l 8080  →  http://localhost:8080/app/"
+echo "  Deploy from: deploy/zsozso-dioxus/"
+echo "  Test:        npx serve deploy/ -l 8080  →  http://localhost:8080/zsozso-dioxus/"

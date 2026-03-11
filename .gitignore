@@ -1,4 +1,6 @@
 /target
+/deploy
+/deploy-*
 *.rlib
 *.tgz
 /dist
