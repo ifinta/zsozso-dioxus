@@ -16,7 +16,7 @@
     // Dynamically load wascan ES module from CDN
     async function ensureWascan() {
         if (wascanReady) return;
-        wascanMod = await import("wascan.js");
+        wascanMod = await import("./wascan.js");
         await wascanMod.default();   // init() — loads the WASM
         wascanMod.init_scanner();
         wascanReady = true;
