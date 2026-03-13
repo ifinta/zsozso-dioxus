@@ -70,7 +70,7 @@
                         window.location.reload();
                     }
                     navigator.serviceWorker.addEventListener('controllerchange', doReload);
-                    navigator.serviceWorker.register('sw.js', { scope: '/zsozso-dioxus/', updateViaCache: 'none' });
+                    navigator.serviceWorker.register('sw.js', { scope: '/app/', updateViaCache: 'none' });
                     hardReload();
                 }
             }
@@ -124,7 +124,7 @@
             // updateViaCache:'none' ensures the browser always fetches sw.js
             // from the network, bypassing any HTTP cache or file lock.
             navigator.serviceWorker.register('sw.js', {
-                scope: '/zsozso-dioxus/',
+                scope: '/app/',
                 updateViaCache: 'none'
             }).then(function(reg) {
                 console.log('[App] Service Worker registered, scope:', reg.scope);
