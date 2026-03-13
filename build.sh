@@ -41,12 +41,10 @@ echo "APP_VERSION → ${APP_VERSION}"
 $DRY && exit 0
 
 # For different builds, patch Dioxus.toml paths to match the right prefix
-sed -i 's|.*PREFIX_MARKER.*|base_path = "${PREFIX}" // PREFIX_MARKER|g' Dioxus.toml
+sed -i "s|.*base_path =.*|base_path = \"${PREFIX}\"|g" Dioxus.toml
 echo "Patched Dioxus.toml for different (-ghpages for Github Pages) deployments"
 
 # ── 2. Build ──────────────────────────────────────────────────────────────────
-echo "Running: dx update"
-dx update
 echo "Running: dx build --release --platform web --features web"
 dx build --release --platform web --features web
 
