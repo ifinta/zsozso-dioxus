@@ -35,7 +35,7 @@
     <link rel="preload" as="image" href="icon-512.png">
 
     <!-- App version — stamped by build.sh; must precede SW registration -->
-    <script>window.__APP_VERSION = 'zsozso-v0.20260309.1646-4390b62b';</script>
+    <script>window.__APP_VERSION = 'zsozso-20260309-1646-4390b62b';</script>
 </head>
 <body>
     <div id="sw-update-banner" style="display:none; position:fixed; top:0; left:0; width:100%;
@@ -48,6 +48,8 @@
     </div>
     <div id="main"></div>
     <script>
+        let APP_NAME = 'ZSOZSO'; // for the update message...
+        let PREFIX = "app";
         if ( document.getElementById('spinner') && 'serviceWorker' in navigator) {
             // bootloader logic: ensure SW is registered and controlling the page, then reload if needed
             if ('serviceWorker' in navigator) {
@@ -70,7 +72,7 @@
                         window.location.reload();
                     }
                     navigator.serviceWorker.addEventListener('controllerchange', doReload);
-                    navigator.serviceWorker.register('sw.js', { scope: '/app/', updateViaCache: 'none' });
+                    navigator.serviceWorker.register(`/${PREFIX}/sw.js`, { scope: `/${PREFIX}/`, updateViaCache: 'none' });
                     hardReload();
                 }
             }
@@ -107,7 +109,7 @@
 
             // Listen for update signal from the Service Worker
             navigator.serviceWorker.addEventListener('message', function(event) {
-                if (event.data?.type === '__ZSOZSO_SW_UPDATED') {
+                if (event.data?.type === `__${APP_NAME}_SW_UPDATED`) {
                     console.log('[App] update signal — showing Refresh banner');
                     _showRefreshBanner();
                 }
@@ -123,8 +125,8 @@
             // Register (not re-register) the SW.
             // updateViaCache:'none' ensures the browser always fetches sw.js
             // from the network, bypassing any HTTP cache or file lock.
-            navigator.serviceWorker.register('sw.js', {
-                scope: '/app/',
+            navigator.serviceWorker.register(`/${PREFIX}/sw.js`, {
+                scope: `/${PREFIX}/`,
                 updateViaCache: 'none'
             }).then(function(reg) {
                 console.log('[App] Service Worker registered, scope:', reg.scope);
