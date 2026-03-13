@@ -74,6 +74,7 @@ echo "Stamped ${DIST_DIR}/index.html"
 # ── 5. Bundle for deployment ─────────────────────────────────────────────────
 # For GitHub Pages builds, patch manifest.json paths and index.html to match the /zsozso-dioxus/ prefix
 if $GHPAGES; then
+  sed -i 's|.*var __BASE_PREFIX =.*|var __BASE_PREFIX = '/zsozso-dioxus/';|g' "${DIST_DIR}/sw.js"
   sed -i 's|.*let PREFIX =.*|        let PREFIX = "zsozso-dioxus";|g' "${DIST_DIR}/index.html"
   sed -i 's|.*"id":.*|    "id": "/zsozso-dioxus/",|g' "${DIST_DIR}/manifest.json"
   sed -i 's|.*"start-url":.*|    "start_url": "/zsozso-dioxus/",|g' "${DIST_DIR}/manifest.json"
