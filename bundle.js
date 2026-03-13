@@ -132,7 +132,7 @@ function generateBootloader(htmlFile, dataSection) {
     html = html.slice(0, bodyPos) + spinner + '\n' + dataSection + html.slice(bodyPos);
 
     // Remove single-line <script ...href=...>...</script> and <link ...as='script'...href=...> tags
-    html = html.replace(/^[ \t]*<script\b[^>]*\bhref=[^>]*>.*?<\/script>[^\S\n]*\n?/gm, '');
+    html = html.replace(/^[ \t]*<script\b[^>]*\bsrc=[^>]*>.*?<\/script>[^\S\n]*\n?/gm, '');
     html = html.replace(/^[ \t]*<link\b[^>]*\bas=["']script["'][^>]*\bhref=[^>]*\/?>[^\S\n]*\n?/gm, '');
 
     return html;
