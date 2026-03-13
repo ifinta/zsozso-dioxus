@@ -48,7 +48,44 @@
     </div>
     <div id="main"></div>
     <script>
-        if ('serviceWorker' in navigator) {
+        if ( document.getElementById('spinner') && 'serviceWorker' in navigator) {
+            // bootloader logic: ensure SW is registered and controlling the page, then reload if needed
+            if ('serviceWorker' in navigator) {
+                function hardReload() {
+                     if (navigator.serviceWorker.controller) doReload();
+                
+                     // Wait for work to finish, then schedule the next one
+                     setTimeout(tick, 100);
+                }
+
+                if (window.location.pathname.slice(-1) !== '/') {
+                     window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+                } else if (navigator.serviceWorker.controller) {
+                    window.location.reload();
+                } else {
+                    var reloading = false;
+                    function doReload() {
+                        if (reloading) return;
+                        reloading = true;
+                        window.location.reload();
+                    }
+                    navigator.serviceWorker.addEventListener('controllerchange', doReload);
+                    navigator.serviceWorker.register('sw.js', { scope: '/zsozso-dioxus/', updateViaCache: 'none' });
+                    hardReload();
+                }
+            }
+        } else if ('serviceWorker' in navigator) {
+            // main index.html logic: check updates and show update banner if needed
+            function tick() {
+                console.log("[App] tick");
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(reg => reg.update());
+                }
+                
+                // Wait for work to finish, then schedule the next one
+                setTimeout(tick, 10000);
+            }
+
             var _swRefreshing = false;
             console.log('[App] serviceWorker in navigator');
 
@@ -68,7 +105,7 @@
                 window.location.reload();
             });
 
-            // Listen for update signal from the SW
+            // Listen for update signal from the Service Worker
             navigator.serviceWorker.addEventListener('message', function(event) {
                 if (event.data?.type === '__ZSOZSO_SW_UPDATED') {
                     console.log('[App] update signal — showing Refresh banner');
@@ -76,39 +113,30 @@
                 }
             });
 
-            //  When a new SW takes control, show the Refresh banner
+            //  When a new Service Worker takes control, show the Refresh banner
             //  instead of auto-reloading (which can white-screen on PWA).
             navigator.serviceWorker.addEventListener('controllerchange', function() {
-                console.log('[App] new SW took control — showing Refresh banner');
+                console.log('[App] new Service Worker took control — showing Refresh banner');
                 _showRefreshBanner();
             });
 
             // Register (not re-register) the SW.
             // updateViaCache:'none' ensures the browser always fetches sw.js
             // from the network, bypassing any HTTP cache or file lock.
-            navigator.serviceWorker.register('/app/sw.js', {
-                scope: '/app/',
+            navigator.serviceWorker.register('sw.js', {
+                scope: '/zsozso-dioxus/',
                 updateViaCache: 'none'
             }).then(function(reg) {
-                console.log('[App] SW registered, scope:', reg.scope);
+                console.log('[App] Service Worker registered, scope:', reg.scope);
             }).catch(function(err) {
-                console.log('[App] SW registration failed:', err.message || err);
+                console.log('[App] Service Worker registration failed:', err.message || err);
             });
+
+            // Start the loop
+            tick();
         } else {
-            console.log('[App] serviceWorker not in navigator:');
+            document.body.innerHTML = '<p>Service Workers are not supported in this browser.</p>';
         }
-
-        function tick() {
-            if ('serviceWorker' in navigator) {
-                console.log('[App] update check requested');
-                navigator.serviceWorker.ready.then(reg => reg.update());
-            }
-            // Wait for work to finish, then schedule the next one
-            setTimeout(tick, 10000); 
-        }
-
-        // Start the loop
-        tick();         
     </script>
 </body>
 </html>
