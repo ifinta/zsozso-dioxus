@@ -1,6 +1,7 @@
 mod db;
 mod i18n;
 mod ledger;
+pub mod sss;
 mod ui;
 mod store;
 

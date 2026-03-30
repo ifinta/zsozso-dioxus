@@ -70,6 +70,8 @@ pub struct WalletState {
     pub gun_address: Signal<String>,
     /// Optional GUN relay URL — if the user runs their own GUN DB node.
     pub gun_relay_url: Signal<String>,
+    /// SSS shares modal — when Some, shows the modal with the share strings.
+    pub sss_shares: Signal<Option<Vec<String>>>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -102,5 +104,6 @@ pub fn use_wallet_state() -> WalletState {
         cyf_modal_message: use_signal(|| None),
         gun_address: use_signal(String::new),
         gun_relay_url: use_signal(String::new),
+        sss_shares: use_signal(|| None),
     }
 }

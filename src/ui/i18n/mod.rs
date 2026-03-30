@@ -162,6 +162,13 @@ pub trait UiI18n {
     fn lbl_gun_relay_url(&self) -> &'static str;
     fn lbl_gun_relay_ph(&self) -> &'static str;
     fn btn_save_gun_relay(&self) -> &'static str;
+
+    // SSS (Shamir's Secret Sharing)
+    fn sss_modal_title(&self) -> &'static str;
+    fn sss_modal_description(&self) -> &'static str;
+    fn sss_share_label(&self, n: usize) -> String;
+    fn btn_copy_share(&self) -> &'static str;
+    fn sss_share_copied(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

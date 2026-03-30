@@ -152,4 +152,11 @@ impl UiI18n for HungarianUi {
     fn lbl_gun_relay_url(&self) -> &'static str { "GUN Relay URL" }
     fn lbl_gun_relay_ph(&self) -> &'static str { "https://your-server.com/gun" }
     fn btn_save_gun_relay(&self) -> &'static str { "Mentés" }
+
+    // SSS (Shamir's Secret Sharing)
+    fn sss_modal_title(&self) -> &'static str { "\u{1F512} Visszaállítási részletek" }
+    fn sss_modal_description(&self) -> &'static str { "Oszd el ezeket a részleteket a megbízható csomópontjaid között. Bármely 3 a 7-ből elegendő az agy-titok visszaállításához." }
+    fn sss_share_label(&self, n: usize) -> String { format!("{}. részlet", n) }
+    fn btn_copy_share(&self) -> &'static str { "\u{1F4CB} Másolás" }
+    fn sss_share_copied(&self) -> &'static str { "\u{2705} Másolva!" }
 }

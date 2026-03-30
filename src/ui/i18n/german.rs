@@ -152,4 +152,11 @@ impl UiI18n for GermanUi {
     fn lbl_gun_relay_url(&self) -> &'static str { "GUN Relay-URL" }
     fn lbl_gun_relay_ph(&self) -> &'static str { "https://your-server.com/gun" }
     fn btn_save_gun_relay(&self) -> &'static str { "Speichern" }
+
+    // SSS (Shamir's Secret Sharing)
+    fn sss_modal_title(&self) -> &'static str { "\u{1F512} Wiederherstellungsanteile" }
+    fn sss_modal_description(&self) -> &'static str { "Verteile diese Anteile an deine vertrauenswürdigen Knoten. 3 von 7 genügen zur Wiederherstellung deines Geheimnisses." }
+    fn sss_share_label(&self, n: usize) -> String { format!("Anteil {}", n) }
+    fn btn_copy_share(&self) -> &'static str { "\u{1F4CB} Kopieren" }
+    fn sss_share_copied(&self) -> &'static str { "\u{2705} Kopiert!" }
 }

@@ -748,6 +748,7 @@ impl AppController {
 
         let mut gun_address = self.s.gun_address;
         let public_key = self.s.public_key.read().clone();
+        let mut sss_shares = self.s.sss_shares;
 
         spawn(async move {
             log("[generate_sea_keys] Starting SEA key generation from passphrase");
@@ -769,6 +770,15 @@ impl AppController {
                     }
 
                     key_pair_signal.set(Some(pair));
+
+                    // Split the passphrase into SSS shares (7 shares, threshold 3)
+                    let shares = crate::sss::split(passphrase.as_bytes(), 3, 7);
+                    let share_strings: Vec<String> = shares.iter()
+                        .map(|s| crate::sss::share_to_hex(s))
+                        .collect();
+                    log(&format!("[generate_sea_keys] SSS shares generated: {} shares, threshold 3", share_strings.len()));
+                    sss_shares.set(Some(share_strings));
+
                     let i18n = ui_i18n(lang);
                     log(&i18n.sea_keys_generated().to_string());
                 }
@@ -782,6 +792,12 @@ impl AppController {
             modal_input.set(Zeroizing::new(String::new()));
             modal_open.set(false);
         });
+    }
+
+    /// Dismiss the SSS shares modal.
+    pub fn dismiss_sss_modal(&self) {
+        let mut sss = self.s.sss_shares;
+        sss.set(None);
     }
 }
 

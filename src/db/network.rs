@@ -5,6 +5,22 @@ fn log(msg: &str) {
     web_sys::console::log_1(&msg.into());
 }
 
+/// Extract the message content from a SEA-signed envelope.
+///
+/// GUN's `putSigned` wraps values as `SEA{"m":"actual","s":"signature"}`.
+/// This strips the wrapper and returns just the `"m"` field.
+/// If the string is not a SEA envelope, it is returned unchanged.
+fn unwrap_sea(s: &str) -> String {
+    if let Some(json) = s.strip_prefix("SEA") {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json) {
+            if let Some(m) = parsed.get("m").and_then(|v| v.as_str()) {
+                return m.to_string();
+            }
+        }
+    }
+    s.to_string()
+}
+
 /// Maximum length for a user nickname displayed on network buttons.
 pub const MAX_NICKNAME_LEN: usize = 16;
 
@@ -90,7 +106,7 @@ impl NetworkGraph for GunNetworkGraph {
     async fn get_parent(&self, node_key: &str) -> Result<Option<String>, String> {
         log(&format!("[NetworkGraph::get_parent] node={}", node_key));
         let result = match self.db.get(&["network", node_key, "parent"]).await? {
-            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(s)),
+            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(unwrap_sea(&s))),
             _ => Ok(None),
         };
         log(&format!("[NetworkGraph::get_parent] result={:?}", result));
@@ -139,8 +155,9 @@ impl NetworkGraph for GunNetworkGraph {
         log(&format!("[NetworkGraph::get_nickname] node={}", node_key));
         let result = match self.db.get(&["network", node_key, "nickname"]).await? {
             Some(GunValue::Text(s)) if !s.is_empty() => {
-                log(&format!("[NetworkGraph::get_nickname] found nickname={}", s));
-                Ok(Some(s))
+                let nick = unwrap_sea(&s);
+                log(&format!("[NetworkGraph::get_nickname] found nickname={}", nick));
+                Ok(Some(nick))
             }
             other => {
                 log(&format!("[NetworkGraph::get_nickname] no nickname, raw={:?}", other));
@@ -201,7 +218,7 @@ impl NetworkGraph for GunNetworkGraph {
     async fn get_gun_address(&self, node_key: &str) -> Result<Option<String>, String> {
         log(&format!("[NetworkGraph::get_gun_address] node={}", node_key));
         let result = match self.db.get(&["network", node_key, "gun_address"]).await? {
-            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(s)),
+            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(unwrap_sea(&s))),
             _ => Ok(None),
         };
         log(&format!("[NetworkGraph::get_gun_address] result={:?}", result));
@@ -221,7 +238,7 @@ impl NetworkGraph for GunNetworkGraph {
     async fn get_gun_relay_url(&self, node_key: &str) -> Result<Option<String>, String> {
         log(&format!("[NetworkGraph::get_gun_relay_url] node={}", node_key));
         let result = match self.db.get(&["network", node_key, "gun_relay_url"]).await? {
-            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(s)),
+            Some(GunValue::Text(s)) if !s.is_empty() => Ok(Some(unwrap_sea(&s))),
             _ => Ok(None),
         };
         log(&format!("[NetworkGraph::get_gun_relay_url] result={:?}", result));
