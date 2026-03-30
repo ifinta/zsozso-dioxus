@@ -4,101 +4,13 @@
  * Verifies that key pairs derived by `pairFromSeed()` are fully functional
  * for both ECDSA signing/verification and ECDH shared secret derivation.
  *
- * Background:
- *   It is not enough to check that the same seed produces the same keys — the
- *   keys must actually *work* with the WebCrypto API.  This test exercises:
- *
- *     1. ECDSA sign / verify — import the derived pub/priv as JWK (the same
- *        format GUN SEA uses internally via `keyForPair`), sign data, and
- *        verify the signature with the public key only.
- *
- *     2. ECDH shared secret — derive two independent key pairs (Alice & Bob),
- *        compute the shared secret from both sides, and confirm they match.
- *        This is the primitive behind `SEA.secret()`.
- *
  * Run:
  *   node test/sea_pair_sign_verify.mjs
  */
 
+import { pairFromSeed } from './p256.mjs';
+
 const crypto = globalThis.crypto || (await import('crypto')).webcrypto;
-
-// ---------------------------------------------------------------------------
-// pairFromSeed — identical logic to sea_bridge.js (standalone for testing)
-// ---------------------------------------------------------------------------
-async function pairFromSeed(seed) {
-    const subtle = crypto.subtle;
-    const seedBytes = new TextEncoder().encode(seed);
-    const baseKey = await subtle.importKey(
-        'raw', seedBytes, { name: 'PBKDF2' }, false, ['deriveBits']
-    );
-
-    const ecdsaBits = new Uint8Array(await subtle.deriveBits({
-        name: 'PBKDF2',
-        salt: new TextEncoder().encode('zsozso-sea-ecdsa'),
-        iterations: 100000,
-        hash: 'SHA-256'
-    }, baseKey, 256));
-
-    const ecdhBits = new Uint8Array(await subtle.deriveBits({
-        name: 'PBKDF2',
-        salt: new TextEncoder().encode('zsozso-sea-ecdh'),
-        iterations: 100000,
-        hash: 'SHA-256'
-    }, baseKey, 256));
-
-    const curveN = BigInt(
-        '0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551'
-    );
-
-    function toValidScalar(bytes) {
-        let hex = '';
-        for (let i = 0; i < bytes.length; i++) {
-            hex += bytes[i].toString(16).padStart(2, '0');
-        }
-        const val = (BigInt('0x' + hex) % (curveN - 1n)) + 1n;
-        const out = val.toString(16).padStart(64, '0');
-        const result = new Uint8Array(32);
-        for (let i = 0; i < 32; i++) {
-            result[i] = parseInt(out.substr(i * 2, 2), 16);
-        }
-        return result;
-    }
-
-    function buildPkcs8(d) {
-        const prefix = new Uint8Array([
-            0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13,
-            0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
-            0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,
-            0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
-        ]);
-        const buf = new Uint8Array(prefix.length + 32);
-        buf.set(prefix);
-        buf.set(d, prefix.length);
-        return buf;
-    }
-
-    const ecdsaD = toValidScalar(ecdsaBits);
-    const ecdhD  = toValidScalar(ecdhBits);
-
-    const ecdsaKey = await subtle.importKey(
-        'pkcs8', buildPkcs8(ecdsaD),
-        { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']
-    );
-    const ecdsaJwk = await subtle.exportKey('jwk', ecdsaKey);
-
-    const ecdhKey = await subtle.importKey(
-        'pkcs8', buildPkcs8(ecdhD),
-        { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
-    );
-    const ecdhJwk = await subtle.exportKey('jwk', ecdhKey);
-
-    return {
-        pub:   ecdsaJwk.x + '.' + ecdsaJwk.y,
-        priv:  ecdsaJwk.d,
-        epub:  ecdhJwk.x  + '.' + ecdhJwk.y,
-        epriv: ecdhJwk.d,
-    };
-}
 
 // ---------------------------------------------------------------------------
 // Test runner

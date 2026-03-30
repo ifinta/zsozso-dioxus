@@ -40,6 +40,10 @@
      * private key scalars.  The scalars are reduced modulo (n-1)+1 so
      * they are always valid P-256 private keys in [1, n-1].
      *
+     * Public keys (x, y) are computed via P-256 scalar multiplication
+     * in pure JS (BigInt arithmetic) — no PKCS#8 import needed, so this
+     * works identically across all browsers including iOS Safari.
+     *
      * Identical seed → identical key pair (deterministic).
      *
      * @param {string} seed - passphrase / seed to derive the key pair from
@@ -72,57 +76,99 @@
             hash: 'SHA-256'
         }, baseKey, 256));
 
-        // P-256 curve order
+        // ── P-256 (secp256r1) curve arithmetic ──────────────────────────
+        var curveP = BigInt('0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF');
+        var curveA = curveP - 3n; // a = -3
         var curveN = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
+        var Gx = BigInt('0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296');
+        var Gy = BigInt('0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5');
 
-        // Convert raw bytes to a valid P-256 private key scalar in [1, n-1]
+        function mod(a, m) { return ((a % m) + m) % m; }
+
+        function modInverse(a, m) {
+            var old_r = mod(a, m), r = m;
+            var old_s = 1n, s = 0n;
+            while (r !== 0n) {
+                var q = old_r / r;
+                var tmp_r = r; r = old_r - q * r; old_r = tmp_r;
+                var tmp_s = s; s = old_s - q * s; old_s = tmp_s;
+            }
+            return mod(old_s, m);
+        }
+
+        function pointDouble(px, py) {
+            if (py === 0n) return [0n, 0n];
+            var s = mod((3n * px * px + curveA) * modInverse(2n * py, curveP), curveP);
+            var xr = mod(s * s - 2n * px, curveP);
+            var yr = mod(s * (px - xr) - py, curveP);
+            return [xr, yr];
+        }
+
+        function pointAdd(x1, y1, x2, y2) {
+            if (x1 === 0n && y1 === 0n) return [x2, y2];
+            if (x2 === 0n && y2 === 0n) return [x1, y1];
+            if (x1 === x2 && y1 === y2) return pointDouble(x1, y1);
+            if (x1 === x2) return [0n, 0n];
+            var s = mod((y2 - y1) * modInverse(x2 - x1, curveP), curveP);
+            var xr = mod(s * s - x1 - x2, curveP);
+            var yr = mod(s * (x1 - xr) - y1, curveP);
+            return [xr, yr];
+        }
+
+        // Double-and-add scalar multiplication: k × P
+        function scalarMult(k, px, py) {
+            var rx = 0n, ry = 0n; // point at infinity
+            var qx = px, qy = py;
+            while (k > 0n) {
+                if (k & 1n) { var t = pointAdd(rx, ry, qx, qy); rx = t[0]; ry = t[1]; }
+                var t2 = pointDouble(qx, qy); qx = t2[0]; qy = t2[1];
+                k >>= 1n;
+            }
+            return [rx, ry];
+        }
+
+        // Convert 32-byte Uint8Array → BigInt scalar in [1, n-1]
         function toValidScalar(bytes) {
             var hex = '';
             for (var i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
-            var val = (BigInt('0x' + hex) % (curveN - 1n)) + 1n;
-            var out = val.toString(16).padStart(64, '0');
-            var result = new Uint8Array(32);
-            for (var i = 0; i < 32; i++) result[i] = parseInt(out.substr(i * 2, 2), 16);
-            return result;
+            return (BigInt('0x' + hex) % (curveN - 1n)) + 1n;
         }
 
-        // Build a minimal PKCS8 DER encoding for a P-256 private key.
-        // This lets WebCrypto compute the public point (x, y) for us.
-        // Structure: SEQUENCE { version=0, AlgId{ecPublicKey, P-256}, OCTET{ECPrivateKey{v=1, d}} }
-        function buildPkcs8(d) {
-            var prefix = new Uint8Array([
-                0x30, 0x41,                                         // SEQUENCE 65 bytes
-                0x02, 0x01, 0x00,                                   // INTEGER 0 (version)
-                0x30, 0x13,                                         // SEQUENCE 19 bytes (AlgorithmIdentifier)
-                0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // OID ecPublicKey
-                0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // OID P-256
-                0x04, 0x27,                                         // OCTET STRING 39 bytes
-                0x30, 0x25,                                         // SEQUENCE 37 bytes (ECPrivateKey)
-                0x02, 0x01, 0x01,                                   // INTEGER 1 (version)
-                0x04, 0x20                                          // OCTET STRING 32 bytes (private key)
-            ]);
-            var buf = new Uint8Array(prefix.length + 32);
-            buf.set(prefix);
-            buf.set(d, prefix.length);
-            return buf;
+        // Convert BigInt → base64url string (32 bytes, zero-padded)
+        function bigintToBase64url(n) {
+            var hex = n.toString(16).padStart(64, '0');
+            var bytes = new Uint8Array(32);
+            for (var i = 0; i < 32; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+            var b64 = btoa(String.fromCharCode.apply(null, bytes));
+            return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         }
 
-        var ecdsaD = toValidScalar(ecdsaBits);
-        var ecdhD  = toValidScalar(ecdhBits);
+        // ── Derive ECDSA key pair ───────────────────────────────────────
+        var ecdsaScalar = toValidScalar(ecdsaBits);
+        var ecdsaPub = scalarMult(ecdsaScalar, Gx, Gy);
 
-        // Import ECDSA key via PKCS8, export as JWK to obtain public point
-        var ecdsaKey = await subtle.importKey(
-            'pkcs8', buildPkcs8(ecdsaD),
-            { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']
-        );
-        var ecdsaJwk = await subtle.exportKey('jwk', ecdsaKey);
+        // ── Derive ECDH key pair ────────────────────────────────────────
+        var ecdhScalar = toValidScalar(ecdhBits);
+        var ecdhPub  = scalarMult(ecdhScalar, Gx, Gy);
 
-        // Import ECDH key via PKCS8, export as JWK to obtain public point
-        var ecdhKey = await subtle.importKey(
-            'pkcs8', buildPkcs8(ecdhD),
-            { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
-        );
-        var ecdhJwk = await subtle.exportKey('jwk', ecdhKey);
+        // ── Verify keys by importing via JWK (also validates correctness) ──
+        var ecdsaJwk = {
+            kty: 'EC', crv: 'P-256',
+            x: bigintToBase64url(ecdsaPub[0]),
+            y: bigintToBase64url(ecdsaPub[1]),
+            d: bigintToBase64url(ecdsaScalar)
+        };
+        await subtle.importKey('jwk', ecdsaJwk,
+            { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+
+        var ecdhJwk = {
+            kty: 'EC', crv: 'P-256',
+            x: bigintToBase64url(ecdhPub[0]),
+            y: bigintToBase64url(ecdhPub[1]),
+            d: bigintToBase64url(ecdhScalar)
+        };
+        await subtle.importKey('jwk', ecdhJwk,
+            { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
 
         // Format in GUN SEA style: pub/epub = "x.y"  priv/epriv = "d"
         var p = {
