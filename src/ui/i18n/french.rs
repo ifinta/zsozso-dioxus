@@ -97,6 +97,11 @@ impl UiI18n for FrenchUi {
     fn log_save_fail(&self, e: &str) -> String { format!("\u{274C} Échec de l'enregistrement\u{00A0}: {}", e) }
     fn log_save_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} Le journal est vide" }
 
+    // GUN DB dump
+    fn btn_dump_gun_db(&self) -> &'static str { "\u{1F4E6} Export GUN DB" }
+    fn log_dumping(&self) -> &'static str { "Export GUN DB en cours..." }
+    fn log_dump_ok(&self) -> &'static str { "\u{2705} GUN DB exportée" }
+
     // Update toast
     fn toast_update_available(&self) -> &'static str { "\u{1F680} Une nouvelle version de Zsozso est disponible\u{00A0}!" }
     fn btn_update_now(&self) -> &'static str { "Mettre à jour" }

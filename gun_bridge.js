@@ -204,6 +204,77 @@
     }
 
     /**
+     * Dump the full local GUN graph, attempting to unwrap SEA-signed values
+     * and decrypt SEA-encrypted values using the provided key pair.
+     *
+     * For each string value in the graph:
+     *   - If it starts with "SEA": extract the "m" (message) field (signed data).
+     *   - Otherwise: try Gun.SEA.decrypt(value, pair); on failure keep original.
+     *
+     * @param {string|null} pairJson - JSON SEA key pair, or null/empty if none
+     * @returns {Promise<string>} - Pretty-printed JSON of the processed graph
+     */
+    async function dump(pairJson) {
+        console.log("[gun_bridge.dump] starting, hasPair=", !!pairJson);
+        if (!_gun) {
+            console.log("[gun_bridge.dump] ERROR: GUN not initialised");
+            return JSON.stringify({ error: "GUN not initialised" });
+        }
+
+        var pair = null;
+        if (pairJson) {
+            try { pair = JSON.parse(pairJson); } catch (e) { pair = null; }
+        }
+
+        var graph = _gun._.graph || {};
+        var result = {};
+
+        for (var soul in graph) {
+            if (!graph.hasOwnProperty(soul)) continue;
+            var node = graph[soul];
+            var cleaned = {};
+            for (var key in node) {
+                if (!node.hasOwnProperty(key)) continue;
+                if (key === "_") continue; // skip GUN metadata
+                var val = node[key];
+                if (typeof val === "string" && val.indexOf("SEA") === 0) {
+                    // SEA-signed envelope: SEA{"m":"...","s":"..."}
+                    try {
+                        var seaJson = val.substring(3);
+                        var parsed = JSON.parse(seaJson);
+                        if (parsed && parsed.m !== undefined) {
+                            cleaned[key] = { _sea_signed: true, value: parsed.m };
+                        } else {
+                            cleaned[key] = val;
+                        }
+                    } catch (e) {
+                        cleaned[key] = val;
+                    }
+                } else if (typeof val === "string" && pair) {
+                    // Try to decrypt with the user's key pair
+                    try {
+                        var dec = await Gun.SEA.decrypt(val, pair);
+                        if (dec !== undefined) {
+                            cleaned[key] = { _sea_decrypted: true, value: dec };
+                        } else {
+                            cleaned[key] = val;
+                        }
+                    } catch (e) {
+                        cleaned[key] = val;
+                    }
+                } else {
+                    cleaned[key] = val;
+                }
+            }
+            result[soul] = cleaned;
+        }
+
+        var json = JSON.stringify(result, null, 2);
+        console.log("[gun_bridge.dump] done, size=", json.length);
+        return json;
+    }
+
+    /**
      * Add a peer to the live GUN instance.
      * @param {string} peerUrl - The peer relay URL to connect to
      */
@@ -227,5 +298,6 @@
         on: on,
         poll: poll,
         off: off,
+        dump: dump,
     };
 })();

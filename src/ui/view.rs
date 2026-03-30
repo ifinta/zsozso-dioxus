@@ -77,7 +77,7 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
                     Tab::Networking => networking::render_networking_tab(s, ctrl, i18n.as_ref()),
                     Tab::Info => info::render_info_tab(s, i18n.as_ref()),
                     Tab::Settings => settings::render_settings_tab(s, ctrl, i18n.as_ref()),
-                    Tab::Log => log::render_log_tab(i18n.as_ref()),
+                    Tab::Log => log::render_log_tab(s, i18n.as_ref()),
                 }
             }
 
