@@ -3,7 +3,7 @@ use super::state::{WalletState, AuthState};
 use super::controller::AppController;
 use super::i18n::ui_i18n;
 use super::tabs::Tab;
-use super::tabs::{home, networking, info, settings, log};
+use super::tabs::{home, zsozso, networking, info, settings, log};
 
 pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
     let lang = *s.language.read();
@@ -73,6 +73,7 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
             div { style: "flex: 1; overflow-y: auto; padding: 20px 30px 90px;",
                 match active {
                     Tab::Cyf => home::render_cyf_tab(s, i18n.as_ref()),
+                    Tab::Zsozso => zsozso::render_zsozso_tab(s, ctrl, i18n.as_ref()),
                     Tab::Networking => networking::render_networking_tab(s, ctrl, i18n.as_ref()),
                     Tab::Info => info::render_info_tab(s, i18n.as_ref()),
                     Tab::Settings => settings::render_settings_tab(s, ctrl, i18n.as_ref()),
@@ -250,8 +251,9 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
 fn render_tab_bar(s: WalletState, i18n: &dyn super::i18n::UiI18n) -> Element {
     let active = *s.active_tab.read();
 
-    let tabs: [(Tab, &str, &str); 5] = [
+    let tabs: [(Tab, &str, &str); 6] = [
         (Tab::Cyf, "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", i18n.tab_cyf()),
+        (Tab::Zsozso, "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z", i18n.tab_zsozso()),
         (Tab::Networking, "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9", i18n.tab_networking()),
         (Tab::Info, "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", i18n.tab_info()),
         (Tab::Settings, "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z", i18n.tab_settings()),

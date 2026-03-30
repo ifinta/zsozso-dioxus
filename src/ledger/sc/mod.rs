@@ -1,7 +1,9 @@
 pub mod zsozso_sc;
+pub mod proof_of_zsozso_sc;
 pub mod i18n;
 
 pub use zsozso_sc::ZsozsoSc;
+pub use proof_of_zsozso_sc::ProofOfZsozsoSc;
 
 use serde::{Deserialize, Serialize};
 use ed25519_dalek::{Signer, SigningKey};

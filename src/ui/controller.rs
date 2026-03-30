@@ -113,6 +113,7 @@ impl AppController {
         let mut secret_key_hidden = self.s.secret_key_hidden;
         public_key.set(Some(pk));
         secret_key_hidden.set(Some(Zeroizing::new(sk)));
+        self.track_network_key();
     }
 
     /// Import a keypair from user input
@@ -128,6 +129,7 @@ impl AppController {
             public_key.set(Some(pub_key_str));
             secret_key_hidden.set(Some(Zeroizing::new(secret)));
             input_value.set(String::new());
+            self.track_network_key();
         }
     }
 
@@ -303,6 +305,8 @@ impl AppController {
         let existing_prf = self.s.prf_key.read().clone();
         let mut prf_key_signal = self.s.prf_key;
         let biometric_on = *self.s.biometric_enabled.read();
+        let mut mn_pk = self.s.mainnet_public_key;
+        let mut tn_pk = self.s.testnet_public_key;
 
         log(&i18n.loading_started().to_string());
         let store = new_store(lang);
@@ -365,8 +369,13 @@ impl AppController {
                     let lgr = StellarLedger::new(net, lang);
                     if let Some(pub_key_str) = lgr.public_key_from_secret(&secret) {
                         net_signal.set(net);
-                        pk_signal.set(Some(pub_key_str));
+                        pk_signal.set(Some(pub_key_str.clone()));
                         sk_signal.set(Some(Zeroizing::new(secret)));
+                        // Track key in the appropriate network slot
+                        match net {
+                            NetworkEnvironment::Production => mn_pk.set(Some(pub_key_str)),
+                            NetworkEnvironment::Test => tn_pk.set(Some(pub_key_str)),
+                        }
                         log(&i18n.ui_updated_with_key().to_string());
                     }
                 }
@@ -798,6 +807,86 @@ impl AppController {
     pub fn dismiss_sss_modal(&self) {
         let mut sss = self.s.sss_shares;
         sss.set(None);
+    }
+
+    /// Track the current public key in the appropriate network slot.
+    /// Called after key generation, import, or load.
+    pub fn track_network_key(&self) {
+        let net = *self.s.current_network.read();
+        let pk = self.s.public_key.read().clone();
+        match net {
+            NetworkEnvironment::Production => {
+                let mut mn = self.s.mainnet_public_key;
+                mn.set(pk);
+            }
+            NetworkEnvironment::Test => {
+                let mut tn = self.s.testnet_public_key;
+                tn.set(pk);
+            }
+        }
+    }
+
+    /// Fetch XLM and ZSOZSO balances from Horizon and locked ZSOZSO from the SC.
+    /// ZSOZSO balance is only fetched on Mainnet.
+    pub fn fetch_balances_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let net_env = *self.s.current_network.read();
+        let public_key = self.s.public_key.read().clone();
+
+        let Some(pk) = public_key else {
+            let mut zs_status = self.s.zs_status;
+            zs_status.set(Some(i18n.zs_no_key().to_string()));
+            return;
+        };
+
+        let mut xlm_balance = self.s.xlm_balance;
+        let mut zsozso_balance = self.s.zsozso_balance;
+        let mut locked_zsozso = self.s.locked_zsozso;
+        let mut zs_status = self.s.zs_status;
+
+        zs_status.set(Some(i18n.zs_fetching_balances().to_string()));
+
+        spawn(async move {
+            // Fetch account balances from Horizon
+            let horizon_url = match net_env {
+                NetworkEnvironment::Production => "https://horizon.stellar.org",
+                NetworkEnvironment::Test => "https://horizon-testnet.stellar.org",
+            };
+            let url = format!("{}/accounts/{}", horizon_url, pk);
+            match reqwest::get(&url).await {
+                Ok(resp) => {
+                    if let Ok(json) = resp.json::<serde_json::Value>().await {
+                        if let Some(balances) = json["balances"].as_array() {
+                            let mut xlm: Option<String> = None;
+                            let mut zsozso: Option<String> = None;
+                            for b in balances {
+                                let asset_type = b["asset_type"].as_str().unwrap_or("");
+                                if asset_type == "native" {
+                                    xlm = b["balance"].as_str().map(|s| s.to_string());
+                                } else if b["asset_code"].as_str() == Some("ZSOZSO") {
+                                    zsozso = b["balance"].as_str().map(|s| s.to_string());
+                                }
+                            }
+                            xlm_balance.set(xlm);
+                            if net_env == NetworkEnvironment::Production {
+                                zsozso_balance.set(zsozso);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    log(&format!("[fetch_balances] Error: {}", e));
+                }
+            }
+
+            // Clear the status spinner
+            zs_status.set(None);
+
+            // Locked ZSOZSO from proof-of-zsozso contract — stored locally for now
+            // (will query SC once deployed)
+            let _ = locked_zsozso;
+        });
     }
 }
 

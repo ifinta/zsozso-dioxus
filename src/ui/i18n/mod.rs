@@ -169,6 +169,21 @@ pub trait UiI18n {
     fn sss_share_label(&self, n: usize) -> String;
     fn btn_copy_share(&self) -> &'static str;
     fn sss_share_copied(&self) -> &'static str;
+
+    // ZS (ZSOZSO) tab
+    fn tab_zsozso(&self) -> &'static str;
+    fn lbl_xlm_balance(&self) -> &'static str;
+    fn lbl_zsozso_balance(&self) -> &'static str;
+    fn lbl_locked_zsozso(&self) -> &'static str;
+    fn btn_lock(&self) -> &'static str;
+    fn btn_unlock(&self) -> &'static str;
+    fn btn_refresh_balances(&self) -> &'static str;
+    fn zs_fetching_balances(&self) -> &'static str;
+    fn zs_mainnet_only(&self) -> &'static str;
+    fn zs_no_key(&self) -> &'static str;
+    fn lbl_mainnet_account(&self) -> &'static str;
+    fn lbl_testnet_account(&self) -> &'static str;
+    fn lbl_no_account(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

@@ -159,4 +159,19 @@ impl UiI18n for SpanishUi {
     fn sss_share_label(&self, n: usize) -> String { format!("Parte {}", n) }
     fn btn_copy_share(&self) -> &'static str { "\u{1F4CB} Copiar" }
     fn sss_share_copied(&self) -> &'static str { "\u{2705} ¡Copiado!" }
+
+    // ZS (ZSOZSO) tab
+    fn tab_zsozso(&self) -> &'static str { "ZS" }
+    fn lbl_xlm_balance(&self) -> &'static str { "XLM" }
+    fn lbl_zsozso_balance(&self) -> &'static str { "ZSOZSO" }
+    fn lbl_locked_zsozso(&self) -> &'static str { "ZSOZSO bloqueado" }
+    fn btn_lock(&self) -> &'static str { "\u{1F512} Bloquear" }
+    fn btn_unlock(&self) -> &'static str { "\u{1F513} Desbloquear" }
+    fn btn_refresh_balances(&self) -> &'static str { "\u{1F504} Actualizar" }
+    fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Obteniendo saldos..." }
+    fn zs_mainnet_only(&self) -> &'static str { "ZSOZSO solo está disponible en Mainnet. Cambie a Mainnet en Ajustes." }
+    fn zs_no_key(&self) -> &'static str { "Cargue una clave primero en Ajustes." }
+    fn lbl_mainnet_account(&self) -> &'static str { "Cuenta Mainnet" }
+    fn lbl_testnet_account(&self) -> &'static str { "Cuenta Testnet" }
+    fn lbl_no_account(&self) -> &'static str { "Sin cuenta" }
 }

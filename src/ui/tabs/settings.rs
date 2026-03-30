@@ -62,6 +62,31 @@ pub fn render_settings_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18
             code { style: "word-break: break-all; font-weight: bold;", "{pk_display}" }
         }
 
+        // Dual-network account overview
+        {
+            let mn_pk = s.mainnet_public_key.read().clone();
+            let tn_pk = s.testnet_public_key.read().clone();
+            let no_account = i18n.lbl_no_account();
+            rsx! {
+                div { style: "display: flex; gap: 8px; margin-bottom: 20px;",
+                    // Mainnet account
+                    div { style: "flex: 1; background: #e8f5e9; padding: 10px; border-radius: 8px; border: 1px solid #c8e6c9;",
+                        p { style: "font-size: 0.7em; color: #2e7d32; margin: 0 0 4px; font-weight: bold;", "{i18n.lbl_mainnet_account()}" }
+                        code { style: "word-break: break-all; font-size: 0.65em; color: #333;",
+                            {mn_pk.as_deref().unwrap_or(no_account)}
+                        }
+                    }
+                    // Testnet account
+                    div { style: "flex: 1; background: #fff3e0; padding: 10px; border-radius: 8px; border: 1px solid #ffe0b2;",
+                        p { style: "font-size: 0.7em; color: #e65100; margin: 0 0 4px; font-weight: bold;", "{i18n.lbl_testnet_account()}" }
+                        code { style: "word-break: break-all; font-size: 0.65em; color: #333;",
+                            {tn_pk.as_deref().unwrap_or(no_account)}
+                        }
+                    }
+                }
+            }
+        }
+
         // Nickname
         div { style: "display: flex; gap: 6px; margin-bottom: 20px; align-items: center;",
             input {

@@ -159,4 +159,19 @@ impl UiI18n for GermanUi {
     fn sss_share_label(&self, n: usize) -> String { format!("Anteil {}", n) }
     fn btn_copy_share(&self) -> &'static str { "\u{1F4CB} Kopieren" }
     fn sss_share_copied(&self) -> &'static str { "\u{2705} Kopiert!" }
+
+    // ZS (ZSOZSO) tab
+    fn tab_zsozso(&self) -> &'static str { "ZS" }
+    fn lbl_xlm_balance(&self) -> &'static str { "XLM" }
+    fn lbl_zsozso_balance(&self) -> &'static str { "ZSOZSO" }
+    fn lbl_locked_zsozso(&self) -> &'static str { "Gesperrtes ZSOZSO" }
+    fn btn_lock(&self) -> &'static str { "\u{1F512} Sperren" }
+    fn btn_unlock(&self) -> &'static str { "\u{1F513} Entsperren" }
+    fn btn_refresh_balances(&self) -> &'static str { "\u{1F504} Aktualisieren" }
+    fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Salden werden abgerufen..." }
+    fn zs_mainnet_only(&self) -> &'static str { "ZSOZSO ist nur auf Mainnet verfügbar. Wechseln Sie zu Mainnet in den Einstellungen." }
+    fn zs_no_key(&self) -> &'static str { "Laden Sie zuerst einen Schlüssel in den Einstellungen." }
+    fn lbl_mainnet_account(&self) -> &'static str { "Mainnet-Konto" }
+    fn lbl_testnet_account(&self) -> &'static str { "Testnet-Konto" }
+    fn lbl_no_account(&self) -> &'static str { "Kein Konto" }
 }

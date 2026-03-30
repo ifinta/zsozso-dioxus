@@ -159,4 +159,19 @@ impl UiI18n for HungarianUi {
     fn sss_share_label(&self, n: usize) -> String { format!("{}. részlet", n) }
     fn btn_copy_share(&self) -> &'static str { "\u{1F4CB} Másolás" }
     fn sss_share_copied(&self) -> &'static str { "\u{2705} Másolva!" }
+
+    // ZS (ZSOZSO) tab
+    fn tab_zsozso(&self) -> &'static str { "ZS" }
+    fn lbl_xlm_balance(&self) -> &'static str { "XLM" }
+    fn lbl_zsozso_balance(&self) -> &'static str { "ZSOZSO" }
+    fn lbl_locked_zsozso(&self) -> &'static str { "Zárolt ZSOZSO" }
+    fn btn_lock(&self) -> &'static str { "\u{1F512} Zárolás" }
+    fn btn_unlock(&self) -> &'static str { "\u{1F513} Feloldás" }
+    fn btn_refresh_balances(&self) -> &'static str { "\u{1F504} Frissítés" }
+    fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Egyenlegek lekérése..." }
+    fn zs_mainnet_only(&self) -> &'static str { "A ZSOZSO csak Mainnet-en elérhető. Válts Mainnet-re a Beállításokban." }
+    fn zs_no_key(&self) -> &'static str { "Előbb tölts be egy kulcsot a Beállításokban." }
+    fn lbl_mainnet_account(&self) -> &'static str { "Mainnet Fiók" }
+    fn lbl_testnet_account(&self) -> &'static str { "Testnet Fiók" }
+    fn lbl_no_account(&self) -> &'static str { "Nincs fiók" }
 }

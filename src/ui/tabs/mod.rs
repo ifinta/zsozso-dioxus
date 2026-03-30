@@ -1,4 +1,5 @@
 pub mod home;
+pub mod zsozso;
 pub mod networking;
 pub mod info;
 pub mod settings;
@@ -8,6 +9,7 @@ pub mod log;
 pub enum Tab {
     #[default]
     Cyf,
+    Zsozso,
     Networking,
     Info,
     Settings,
