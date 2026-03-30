@@ -24,12 +24,12 @@ pub fn app() -> Element {
         clipboard::register_beforeunload_cleanup();
     });
 
-    // Auto-load secret from store after authentication
+    // Auto-load secrets from store after authentication
     use_effect(move || {
         let auth = *state.auth_state.read();
         if auth == AuthState::Authenticated && !auto_loaded() {
             auto_loaded.set(true);
-            ctrl.load_from_store();
+            ctrl.load_all_from_store();
         }
     });
 

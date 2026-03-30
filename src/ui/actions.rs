@@ -60,3 +60,11 @@ pub fn import_keypair(raw_input: String, net_env: NetworkEnvironment, lang: Lang
 pub fn new_store(lang: Language) -> IndexedDbStore {
     IndexedDbStore::new("zsozso", "default_account", lang)
 }
+
+pub fn new_store_for_network(lang: Language, net: NetworkEnvironment) -> IndexedDbStore {
+    let account = match net {
+        NetworkEnvironment::Production => "mainnet_account",
+        NetworkEnvironment::Test => "testnet_account",
+    };
+    IndexedDbStore::new("zsozso", account, lang)
+}

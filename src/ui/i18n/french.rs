@@ -187,4 +187,11 @@ impl UiI18n for FrenchUi {
     fn lbl_mainnet_account(&self) -> &'static str { "Compte Mainnet" }
     fn lbl_testnet_account(&self) -> &'static str { "Compte Testnet" }
     fn lbl_no_account(&self) -> &'static str { "Aucun compte" }
+
+    fn lbl_mainnet_keys(&self) -> &'static str { "Clé Mainnet" }
+    fn lbl_testnet_keys(&self) -> &'static str { "Clé Testnet" }
+    fn lbl_pin_code(&self) -> &'static str { "Code PIN" }
+    fn lbl_pin_code_desc(&self) -> &'static str { "Définissez un code PIN pour protéger votre portefeuille (localhost uniquement)" }
+    fn lbl_pin_code_ph(&self) -> &'static str { "Entrez le PIN..." }
+    fn btn_set_pin(&self) -> &'static str { "Définir le PIN" }
 }

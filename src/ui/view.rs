@@ -101,39 +101,6 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
             }
         }
 
-        // Network switch save modal
-        if s.network_switch_pending.read().is_some() {
-            div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100;",
-                div { style: "background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);",
-                    p { style: "margin-bottom: 20px; font-size: 1em; color: #333;",
-                        "{i18n.network_switch_save_prompt()}"
-                    }
-                    div { style: "display: flex; flex-direction: column; gap: 10px;",
-                        button {
-                            style: "padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
-                            onclick: move |_| ctrl.confirm_network_switch_save(),
-                            "{i18n.btn_save_and_switch()}"
-                        }
-                        button {
-                            style: "padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
-                            onclick: move |_| ctrl.confirm_network_switch_and_save(),
-                            "{i18n.btn_switch_and_save()}"
-                        }
-                        button {
-                            style: "padding: 12px 24px; background: #ffc107; color: #333; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
-                            onclick: move |_| ctrl.confirm_network_switch_discard(),
-                            "{i18n.btn_switch_without_saving()}"
-                        }
-                        button {
-                            style: "padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;",
-                            onclick: move |_| ctrl.cancel_network_switch(),
-                            "{i18n.btn_cancel()}"
-                        }
-                    }
-                }
-            }
-        }
-
         // Biometric required to save – error modal
         if *s.biometric_save_modal_open.read() {
             div { style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1150;",
@@ -250,6 +217,8 @@ pub fn render_app(s: WalletState, ctrl: AppController) -> Element {
 
 fn render_tab_bar(s: WalletState, i18n: &dyn super::i18n::UiI18n) -> Element {
     let active = *s.active_tab.read();
+    let has_mainnet = s.mainnet_public_key.read().is_some();
+    let has_testnet = s.testnet_public_key.read().is_some();
 
     let tabs: [(Tab, &str, &str); 6] = [
         (Tab::Cyf, "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", i18n.tab_cyf()),
@@ -265,15 +234,21 @@ fn render_tab_bar(s: WalletState, i18n: &dyn super::i18n::UiI18n) -> Element {
             for (tab, path, label) in tabs {
                 {
                     let is_active = active == tab;
-                    let color = if is_active { "#007bff" } else { "#999" };
+                    let is_disabled = (tab == Tab::Zsozso && !has_mainnet)
+                        || (tab == Tab::Networking && !has_testnet);
+                    let color = if is_disabled { "#ddd" } else if is_active { "#007bff" } else { "#999" };
                     let font_weight = if is_active { "bold" } else { "normal" };
+                    let cursor = if is_disabled { "default" } else { "pointer" };
                     rsx! {
                         button {
                             key: "{label}",
-                            style: "flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: none; cursor: pointer; padding: 4px 0; color: {color};",
+                            style: "flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: none; cursor: {cursor}; padding: 4px 0; color: {color};",
+                            disabled: is_disabled,
                             onclick: move |_| {
-                                let mut active_tab = s.active_tab;
-                                active_tab.set(tab);
+                                if !is_disabled {
+                                    let mut active_tab = s.active_tab;
+                                    active_tab.set(tab);
+                                }
                             },
                             svg {
                                 width: "24",

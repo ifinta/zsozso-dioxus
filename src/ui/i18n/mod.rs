@@ -197,6 +197,16 @@ pub trait UiI18n {
     fn lbl_mainnet_account(&self) -> &'static str;
     fn lbl_testnet_account(&self) -> &'static str;
     fn lbl_no_account(&self) -> &'static str;
+
+    // Dual-key settings sections
+    fn lbl_mainnet_keys(&self) -> &'static str;
+    fn lbl_testnet_keys(&self) -> &'static str;
+
+    // Localhost PIN code
+    fn lbl_pin_code(&self) -> &'static str;
+    fn lbl_pin_code_desc(&self) -> &'static str;
+    fn lbl_pin_code_ph(&self) -> &'static str;
+    fn btn_set_pin(&self) -> &'static str;
 }
 
 /// Factory function to get the appropriate UiI18n implementation

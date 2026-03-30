@@ -187,4 +187,11 @@ impl UiI18n for HungarianUi {
     fn lbl_mainnet_account(&self) -> &'static str { "Mainnet Fiók" }
     fn lbl_testnet_account(&self) -> &'static str { "Testnet Fiók" }
     fn lbl_no_account(&self) -> &'static str { "Nincs fiók" }
+
+    fn lbl_mainnet_keys(&self) -> &'static str { "Mainnet Kulcs" }
+    fn lbl_testnet_keys(&self) -> &'static str { "Testnet Kulcs" }
+    fn lbl_pin_code(&self) -> &'static str { "PIN Kód" }
+    fn lbl_pin_code_desc(&self) -> &'static str { "Állítson be PIN kódot a tárca védelméhez (csak localhost)" }
+    fn lbl_pin_code_ph(&self) -> &'static str { "PIN megadása..." }
+    fn btn_set_pin(&self) -> &'static str { "PIN Beállítása" }
 }

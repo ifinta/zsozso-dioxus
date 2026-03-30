@@ -187,4 +187,11 @@ impl UiI18n for SpanishUi {
     fn lbl_mainnet_account(&self) -> &'static str { "Cuenta Mainnet" }
     fn lbl_testnet_account(&self) -> &'static str { "Cuenta Testnet" }
     fn lbl_no_account(&self) -> &'static str { "Sin cuenta" }
+
+    fn lbl_mainnet_keys(&self) -> &'static str { "Clave Mainnet" }
+    fn lbl_testnet_keys(&self) -> &'static str { "Clave Testnet" }
+    fn lbl_pin_code(&self) -> &'static str { "Código PIN" }
+    fn lbl_pin_code_desc(&self) -> &'static str { "Establezca un código PIN para proteger su billetera (solo localhost)" }
+    fn lbl_pin_code_ph(&self) -> &'static str { "Ingrese PIN..." }
+    fn btn_set_pin(&self) -> &'static str { "Establecer PIN" }
 }

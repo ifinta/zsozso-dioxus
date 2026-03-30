@@ -187,4 +187,11 @@ impl UiI18n for GermanUi {
     fn lbl_mainnet_account(&self) -> &'static str { "Mainnet-Konto" }
     fn lbl_testnet_account(&self) -> &'static str { "Testnet-Konto" }
     fn lbl_no_account(&self) -> &'static str { "Kein Konto" }
+
+    fn lbl_mainnet_keys(&self) -> &'static str { "Mainnet-Schlüssel" }
+    fn lbl_testnet_keys(&self) -> &'static str { "Testnet-Schlüssel" }
+    fn lbl_pin_code(&self) -> &'static str { "PIN-Code" }
+    fn lbl_pin_code_desc(&self) -> &'static str { "Legen Sie einen PIN-Code fest, um Ihre Wallet zu schützen (nur localhost)" }
+    fn lbl_pin_code_ph(&self) -> &'static str { "PIN eingeben..." }
+    fn btn_set_pin(&self) -> &'static str { "PIN festlegen" }
 }

@@ -82,10 +82,24 @@ pub struct WalletState {
     pub lock_amount: Signal<String>,
     /// ZS tab status message (fetching, error, etc.).
     pub zs_status: Signal<Option<String>>,
-    /// Stored mainnet public key (kept across network switches).
+    /// Stored mainnet public key.
     pub mainnet_public_key: Signal<Option<String>>,
-    /// Stored testnet public key (kept across network switches).
+    /// Stored testnet public key.
     pub testnet_public_key: Signal<Option<String>>,
+    /// Mainnet secret key.
+    pub mainnet_secret_key: Signal<Option<Zeroizing<String>>>,
+    /// Testnet secret key.
+    pub testnet_secret_key: Signal<Option<Zeroizing<String>>>,
+    /// Mainnet import input field.
+    pub mainnet_input_value: Signal<String>,
+    /// Testnet import input field.
+    pub testnet_input_value: Signal<String>,
+    /// Whether the mainnet secret is revealed.
+    pub mainnet_show_secret: Signal<bool>,
+    /// Whether the testnet secret is revealed.
+    pub testnet_show_secret: Signal<bool>,
+    /// Localhost PIN code (used instead of passkey on localhost).
+    pub pin_code: Signal<String>,
 }
 
 pub fn use_wallet_state() -> WalletState {
@@ -126,5 +140,12 @@ pub fn use_wallet_state() -> WalletState {
         zs_status: use_signal(|| None),
         mainnet_public_key: use_signal(|| None),
         testnet_public_key: use_signal(|| None),
+        mainnet_secret_key: use_signal(|| None),
+        testnet_secret_key: use_signal(|| None),
+        mainnet_input_value: use_signal(String::new),
+        testnet_input_value: use_signal(String::new),
+        mainnet_show_secret: use_signal(|| false),
+        testnet_show_secret: use_signal(|| false),
+        pin_code: use_signal(String::new),
     }
 }
