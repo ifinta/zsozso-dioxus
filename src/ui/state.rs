@@ -78,6 +78,8 @@ pub struct WalletState {
     pub zsozso_balance: Signal<Option<String>>,
     /// Locked ZSOZSO in the proof-of-zsozso smart contract.
     pub locked_zsozso: Signal<Option<String>>,
+    /// Amount input for lock/unlock operations.
+    pub lock_amount: Signal<String>,
     /// ZS tab status message (fetching, error, etc.).
     pub zs_status: Signal<Option<String>>,
     /// Stored mainnet public key (kept across network switches).
@@ -120,6 +122,7 @@ pub fn use_wallet_state() -> WalletState {
         xlm_balance: use_signal(|| None),
         zsozso_balance: use_signal(|| None),
         locked_zsozso: use_signal(|| None),
+        lock_amount: use_signal(String::new),
         zs_status: use_signal(|| None),
         mainnet_public_key: use_signal(|| None),
         testnet_public_key: use_signal(|| None),

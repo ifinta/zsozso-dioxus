@@ -181,6 +181,14 @@ pub trait UiI18n {
     fn zs_fetching_balances(&self) -> &'static str;
     fn zs_mainnet_only(&self) -> &'static str;
     fn zs_no_key(&self) -> &'static str;
+    fn zs_locking(&self) -> &'static str;
+    fn zs_unlocking(&self) -> &'static str;
+    fn fmt_zs_lock_success(&self, amount: &str) -> String;
+    fn fmt_zs_unlock_success(&self, amount: &str) -> String;
+    fn fmt_zs_lock_error(&self, err: &str) -> String;
+    fn fmt_zs_unlock_error(&self, err: &str) -> String;
+    fn zs_invalid_amount(&self) -> &'static str;
+    fn lbl_amount(&self) -> &'static str;
     fn lbl_mainnet_account(&self) -> &'static str;
     fn lbl_testnet_account(&self) -> &'static str;
     fn lbl_no_account(&self) -> &'static str;

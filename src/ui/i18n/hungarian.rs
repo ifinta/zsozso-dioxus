@@ -171,6 +171,14 @@ impl UiI18n for HungarianUi {
     fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Egyenlegek lekérése..." }
     fn zs_mainnet_only(&self) -> &'static str { "A ZSOZSO csak Mainnet-en elérhető. Válts Mainnet-re a Beállításokban." }
     fn zs_no_key(&self) -> &'static str { "Előbb tölts be egy kulcsot a Beállításokban." }
+    fn zs_locking(&self) -> &'static str { "\u{1F512} ZSOZSO zárolása..." }
+    fn zs_unlocking(&self) -> &'static str { "\u{1F513} ZSOZSO feloldása..." }
+    fn fmt_zs_lock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO zárolva", amount) }
+    fn fmt_zs_unlock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO feloldva", amount) }
+    fn fmt_zs_lock_error(&self, err: &str) -> String { format!("\u{274C} Zárolás sikertelen: {}", err) }
+    fn fmt_zs_unlock_error(&self, err: &str) -> String { format!("\u{274C} Feloldás sikertelen: {}", err) }
+    fn zs_invalid_amount(&self) -> &'static str { "Kérlek, adj meg egy érvényes összeget." }
+    fn lbl_amount(&self) -> &'static str { "Összeg" }
     fn lbl_mainnet_account(&self) -> &'static str { "Mainnet Fiók" }
     fn lbl_testnet_account(&self) -> &'static str { "Testnet Fiók" }
     fn lbl_no_account(&self) -> &'static str { "Nincs fiók" }

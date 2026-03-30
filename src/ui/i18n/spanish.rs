@@ -171,6 +171,14 @@ impl UiI18n for SpanishUi {
     fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Obteniendo saldos..." }
     fn zs_mainnet_only(&self) -> &'static str { "ZSOZSO solo está disponible en Mainnet. Cambie a Mainnet en Ajustes." }
     fn zs_no_key(&self) -> &'static str { "Cargue una clave primero en Ajustes." }
+    fn zs_locking(&self) -> &'static str { "\u{1F512} Bloqueando ZSOZSO..." }
+    fn zs_unlocking(&self) -> &'static str { "\u{1F513} Desbloqueando ZSOZSO..." }
+    fn fmt_zs_lock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO bloqueado", amount) }
+    fn fmt_zs_unlock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO desbloqueado", amount) }
+    fn fmt_zs_lock_error(&self, err: &str) -> String { format!("\u{274C} Bloqueo fallido: {}", err) }
+    fn fmt_zs_unlock_error(&self, err: &str) -> String { format!("\u{274C} Desbloqueo fallido: {}", err) }
+    fn zs_invalid_amount(&self) -> &'static str { "Por favor, ingrese un monto válido." }
+    fn lbl_amount(&self) -> &'static str { "Monto" }
     fn lbl_mainnet_account(&self) -> &'static str { "Cuenta Mainnet" }
     fn lbl_testnet_account(&self) -> &'static str { "Cuenta Testnet" }
     fn lbl_no_account(&self) -> &'static str { "Sin cuenta" }

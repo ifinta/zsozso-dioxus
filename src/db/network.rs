@@ -73,16 +73,21 @@ pub struct GunNetworkGraph {
 }
 
 impl GunNetworkGraph {
-    pub fn new(language: Language, sea_pair: Option<SeaKeyPair>) -> Self {
-        log(&format!("[GunNetworkGraph::new] has_sea_pair={}", sea_pair.is_some()));
+    pub fn new(language: Language, sea_pair: Option<SeaKeyPair>, peers: Vec<String>) -> Self {
+        log(&format!("[GunNetworkGraph::new] has_sea_pair={}, peers={:?}", sea_pair.is_some(), peers));
         let config = GunConfig {
-            peers: vec![],
+            peers,
             local_storage: true,
         };
         Self {
             db: GunDb::new(config, language),
             sea_pair,
         }
+    }
+
+    /// Add a peer relay URL to the live GUN instance.
+    pub fn add_peer(&self, peer_url: &str) {
+        self.db.add_peer(peer_url);
     }
 
     /// Write helper — uses SEA-signed put. Requires a keypair.

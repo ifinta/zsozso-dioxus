@@ -171,6 +171,14 @@ impl UiI18n for GermanUi {
     fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Salden werden abgerufen..." }
     fn zs_mainnet_only(&self) -> &'static str { "ZSOZSO ist nur auf Mainnet verfügbar. Wechseln Sie zu Mainnet in den Einstellungen." }
     fn zs_no_key(&self) -> &'static str { "Laden Sie zuerst einen Schlüssel in den Einstellungen." }
+    fn zs_locking(&self) -> &'static str { "\u{1F512} ZSOZSO wird gesperrt..." }
+    fn zs_unlocking(&self) -> &'static str { "\u{1F513} ZSOZSO wird entsperrt..." }
+    fn fmt_zs_lock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO gesperrt", amount) }
+    fn fmt_zs_unlock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO entsperrt", amount) }
+    fn fmt_zs_lock_error(&self, err: &str) -> String { format!("\u{274C} Sperrung fehlgeschlagen: {}", err) }
+    fn fmt_zs_unlock_error(&self, err: &str) -> String { format!("\u{274C} Entsperrung fehlgeschlagen: {}", err) }
+    fn zs_invalid_amount(&self) -> &'static str { "Bitte geben Sie einen gültigen Betrag ein." }
+    fn lbl_amount(&self) -> &'static str { "Betrag" }
     fn lbl_mainnet_account(&self) -> &'static str { "Mainnet-Konto" }
     fn lbl_testnet_account(&self) -> &'static str { "Testnet-Konto" }
     fn lbl_no_account(&self) -> &'static str { "Kein Konto" }

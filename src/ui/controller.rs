@@ -23,6 +23,12 @@ impl AppController {
         Self { s: state }
     }
 
+    /// Get the configured GUN relay peers from the relay URL signal.
+    fn gun_peers(&self) -> Vec<String> {
+        let url = self.s.gun_relay_url.read().clone();
+        if url.trim().is_empty() { vec![] } else { vec![url] }
+    }
+
     /// Start passkey authentication (gate modal button).
     /// On localhost the passkey check is skipped for easier testing.
     pub fn start_auth(&self) {
@@ -469,6 +475,7 @@ impl AppController {
         let i18n = ui_i18n(lang);
         let public_key = self.s.public_key.read().clone();
         let sea_pair = self.s.sea_key_pair.read().clone();
+        let peers = self.gun_peers();
 
         // SEA keypair required for authenticated writes
         if sea_pair.is_none() {
@@ -495,7 +502,7 @@ impl AppController {
             match super::qr_scanner::scan_qr().await {
                 Ok(worker_key) => {
                     log(&format!("[add_worker_action] Scanned worker key: {}", worker_key));
-                    let graph = GunNetworkGraph::new(lang, sea_pair);
+                    let graph = GunNetworkGraph::new(lang, sea_pair, peers);
                     match graph.add_worker(&pk, &worker_key).await {
                         Ok(_) => {
                             log("[add_worker_action] Worker added successfully");
@@ -542,6 +549,7 @@ impl AppController {
         let public_key = self.s.public_key.read().clone();
         let lang = *self.s.language.read();
         let sea_pair = self.s.sea_key_pair.read().clone();
+        let peers = self.gun_peers();
         let mut parents_signal = self.s.network_parents;
         let mut workers_signal = self.s.network_workers;
         let mut nicknames_signal = self.s.network_nicknames;
@@ -557,7 +565,7 @@ impl AppController {
         log(&format!("[load_network_action] Loading network data for pk={}", pk));
 
         spawn(async move {
-            let graph = GunNetworkGraph::new(lang, sea_pair);
+            let graph = GunNetworkGraph::new(lang, sea_pair, peers);
 
             log("[load_network_action] Fetching ancestors...");
             let ancestors = graph.get_ancestors(&pk, 6).await.unwrap_or_default();
@@ -606,6 +614,7 @@ impl AppController {
         let public_key = self.s.public_key.read().clone();
         let lang = *self.s.language.read();
         let sea_pair = self.s.sea_key_pair.read().clone();
+        let peers = self.gun_peers();
 
         // SEA keypair required for authenticated writes
         if sea_pair.is_none() {
@@ -621,7 +630,7 @@ impl AppController {
 
         log(&format!("[save_nickname_action] Saving nickname '{}' for pk={}", nickname, pk));
         spawn(async move {
-            let graph = GunNetworkGraph::new(lang, sea_pair);
+            let graph = GunNetworkGraph::new(lang, sea_pair, peers);
             match graph.set_nickname(&pk, &nickname).await {
                 Ok(_) => {
                     log("[save_nickname_action] Nickname saved successfully");
@@ -705,6 +714,7 @@ impl AppController {
         let public_key = self.s.public_key.read().clone();
         let lang = *self.s.language.read();
         let sea_pair = self.s.sea_key_pair.read().clone();
+        let peers = if relay_url.trim().is_empty() { vec![] } else { vec![relay_url.clone()] };
 
         if sea_pair.is_none() {
             log("[save_gun_relay_action] No SEA keypair, opening modal");
@@ -719,7 +729,7 @@ impl AppController {
 
         spawn(async move {
             log(&format!("[save_gun_relay_action] Saving relay URL: {}", relay_url));
-            let graph = GunNetworkGraph::new(lang, sea_pair);
+            let graph = GunNetworkGraph::new(lang, sea_pair, peers);
             match graph.set_gun_relay_url(&pk, &relay_url).await {
                 Ok(_) => log("[save_gun_relay_action] Relay URL saved successfully"),
                 Err(e) => log(&format!("[save_gun_relay_action] Failed to save relay URL: {}", e)),
@@ -758,6 +768,7 @@ impl AppController {
         let mut gun_address = self.s.gun_address;
         let public_key = self.s.public_key.read().clone();
         let mut sss_shares = self.s.sss_shares;
+        let peers = self.gun_peers();
 
         spawn(async move {
             log("[generate_sea_keys] Starting SEA key generation from passphrase");
@@ -770,7 +781,7 @@ impl AppController {
                     // Store GUN address to GunDB if we have a Stellar public key
                     if let Some(pk) = &public_key {
                         log(&format!("[generate_sea_keys] Storing GUN address to GunDB for node {}", pk));
-                        let graph = GunNetworkGraph::new(lang, Some(pair.clone()));
+                        let graph = GunNetworkGraph::new(lang, Some(pair.clone()), peers.clone());
                         if let Err(e) = graph.set_gun_address(pk, &pair.pub_key).await {
                             log(&format!("[generate_sea_keys] Failed to store GUN address: {}", e));
                         } else {
@@ -824,6 +835,90 @@ impl AppController {
                 tn.set(pk);
             }
         }
+    }
+
+    /// Lock ZSOZSO tokens via the proof-of-zsozso smart contract.
+    pub fn lock_zsozso_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let net_env = *self.s.current_network.read();
+        let mut zs_status = self.s.zs_status;
+        let mut lock_amount_signal = self.s.lock_amount;
+
+        let amount_str = self.s.lock_amount.read().clone();
+        let amount: u64 = match amount_str.trim().parse() {
+            Ok(v) if v > 0 => v,
+            _ => {
+                zs_status.set(Some(i18n.zs_invalid_amount().to_string()));
+                return;
+            }
+        };
+
+        let secret = match self.s.secret_key_hidden.read().as_ref() {
+            Some(sk) => sk.as_str().to_string(),
+            None => {
+                zs_status.set(Some(i18n.zs_no_key().to_string()));
+                return;
+            }
+        };
+
+        zs_status.set(Some(i18n.zs_locking().to_string()));
+
+        spawn(async move {
+            let sc = crate::ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
+            let i18n = ui_i18n(lang);
+            match sc.lock(&secret, amount).await {
+                Ok(_) => {
+                    zs_status.set(Some(i18n.fmt_zs_lock_success(&amount.to_string())));
+                    lock_amount_signal.set(String::new());
+                }
+                Err(e) => {
+                    zs_status.set(Some(i18n.fmt_zs_lock_error(&e)));
+                }
+            }
+        });
+    }
+
+    /// Unlock ZSOZSO tokens via the proof-of-zsozso smart contract.
+    pub fn unlock_zsozso_action(&self) {
+        let lang = *self.s.language.read();
+        let i18n = ui_i18n(lang);
+        let net_env = *self.s.current_network.read();
+        let mut zs_status = self.s.zs_status;
+        let mut lock_amount_signal = self.s.lock_amount;
+
+        let amount_str = self.s.lock_amount.read().clone();
+        let amount: u64 = match amount_str.trim().parse() {
+            Ok(v) if v > 0 => v,
+            _ => {
+                zs_status.set(Some(i18n.zs_invalid_amount().to_string()));
+                return;
+            }
+        };
+
+        let secret = match self.s.secret_key_hidden.read().as_ref() {
+            Some(sk) => sk.as_str().to_string(),
+            None => {
+                zs_status.set(Some(i18n.zs_no_key().to_string()));
+                return;
+            }
+        };
+
+        zs_status.set(Some(i18n.zs_unlocking().to_string()));
+
+        spawn(async move {
+            let sc = crate::ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
+            let i18n = ui_i18n(lang);
+            match sc.unlock(&secret, amount).await {
+                Ok(_) => {
+                    zs_status.set(Some(i18n.fmt_zs_unlock_success(&amount.to_string())));
+                    lock_amount_signal.set(String::new());
+                }
+                Err(e) => {
+                    zs_status.set(Some(i18n.fmt_zs_unlock_error(&e)));
+                }
+            }
+        });
     }
 
     /// Fetch XLM and ZSOZSO balances from Horizon and locked ZSOZSO from the SC.

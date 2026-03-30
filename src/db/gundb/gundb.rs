@@ -67,6 +67,18 @@ impl GunDb {
             next_sub_id: AtomicU64::new(1),
         }
     }
+
+    /// Add a peer relay URL to the live GUN instance.
+    pub fn add_peer(&self, peer_url: &str) {
+        log(&format!("[GunDb::add_peer] url={}", peer_url));
+        if let Ok(bridge) = gun_bridge() {
+            if let Ok(add_peer_fn) = bridge_fn(&bridge, "addPeer") {
+                let _ = add_peer_fn.call1(&bridge, &JsValue::from_str(peer_url));
+            } else {
+                log("[GunDb::add_peer] ERROR: addPeer not found on bridge");
+            }
+        }
+    }
 }
 
 // ===========================================================================

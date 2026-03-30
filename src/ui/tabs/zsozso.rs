@@ -74,13 +74,28 @@ pub fn render_zsozso_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18n)
     rsx! {
         div { style: "display: flex; flex-direction: column; gap: 16px; height: 100%;",
 
+            // Amount input
+            div { style: "display: flex; gap: 8px; align-items: center;",
+                label { style: "font-size: 0.9em; font-weight: bold; color: #555; white-space: nowrap;",
+                    "{i18n.lbl_amount()}"
+                }
+                input {
+                    r#type: "number",
+                    min: "1",
+                    style: "flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em;",
+                    placeholder: "0",
+                    value: "{s.lock_amount.read()}",
+                    oninput: move |e| {
+                        let mut amount = s.lock_amount;
+                        amount.set(e.value());
+                    },
+                }
+            }
+
             // Lock button (blue, top)
             button {
                 style: "width: 100%; padding: 16px; background: #2E6AB0; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;",
-                onclick: move |_| {
-                    let mut modal = s.cyf_modal_message;
-                    modal.set(Some("Lock function is not yet connected to the deployed contract.".to_string()));
-                },
+                onclick: move |_| ctrl.lock_zsozso_action(),
                 "{i18n.btn_lock()}"
             }
 
@@ -146,10 +161,7 @@ pub fn render_zsozso_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18n)
             // Unlock button (orange, bottom)
             button {
                 style: "width: 100%; padding: 16px; background: #fd7e14; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;",
-                onclick: move |_| {
-                    let mut modal = s.cyf_modal_message;
-                    modal.set(Some("Unlock function is not yet connected to the deployed contract.".to_string()));
-                },
+                onclick: move |_| ctrl.unlock_zsozso_action(),
                 "{i18n.btn_unlock()}"
             }
         }

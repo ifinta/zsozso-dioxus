@@ -23,7 +23,12 @@
     function init(peersJson) {
         console.log("[gun_bridge.init] peersJson=", peersJson);
         if (_gun) {
-            console.log("[gun_bridge.init] Already initialised, skipping");
+            console.log("[gun_bridge.init] Already initialised, adding any new peers");
+            const peers = JSON.parse(peersJson || "[]");
+            if (peers.length > 0) {
+                _gun.opt({ peers: peers });
+                console.log("[gun_bridge.init] Added peers to existing instance:", peers);
+            }
             return;
         }
         const peers = JSON.parse(peersJson || "[]");
@@ -198,9 +203,24 @@
         });
     }
 
+    /**
+     * Add a peer to the live GUN instance.
+     * @param {string} peerUrl - The peer relay URL to connect to
+     */
+    function addPeer(peerUrl) {
+        console.log("[gun_bridge.addPeer] peerUrl=", peerUrl);
+        if (!_gun) {
+            console.log("[gun_bridge.addPeer] ERROR: GUN not initialised");
+            return;
+        }
+        _gun.opt({ peers: [peerUrl] });
+        console.log("[gun_bridge.addPeer] Peer added:", peerUrl);
+    }
+
     // Expose on window
     window.__gun_bridge = {
         init: init,
+        addPeer: addPeer,
         get: get,
         put: put,
         putSigned: putSigned,

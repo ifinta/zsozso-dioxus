@@ -171,6 +171,14 @@ impl UiI18n for FrenchUi {
     fn zs_fetching_balances(&self) -> &'static str { "\u{1F504} Récupération des soldes..." }
     fn zs_mainnet_only(&self) -> &'static str { "ZSOZSO n'est disponible que sur Mainnet. Basculez vers Mainnet dans les Paramètres." }
     fn zs_no_key(&self) -> &'static str { "Chargez d'abord une clé dans les Paramètres." }
+    fn zs_locking(&self) -> &'static str { "\u{1F512} Verrouillage de ZSOZSO..." }
+    fn zs_unlocking(&self) -> &'static str { "\u{1F513} Déverrouillage de ZSOZSO..." }
+    fn fmt_zs_lock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO verrouillé", amount) }
+    fn fmt_zs_unlock_success(&self, amount: &str) -> String { format!("\u{2705} {} ZSOZSO déverrouillé", amount) }
+    fn fmt_zs_lock_error(&self, err: &str) -> String { format!("\u{274C} Échec du verrouillage : {}", err) }
+    fn fmt_zs_unlock_error(&self, err: &str) -> String { format!("\u{274C} Échec du déverrouillage : {}", err) }
+    fn zs_invalid_amount(&self) -> &'static str { "Veuillez entrer un montant valide." }
+    fn lbl_amount(&self) -> &'static str { "Montant" }
     fn lbl_mainnet_account(&self) -> &'static str { "Compte Mainnet" }
     fn lbl_testnet_account(&self) -> &'static str { "Compte Testnet" }
     fn lbl_no_account(&self) -> &'static str { "Aucun compte" }
