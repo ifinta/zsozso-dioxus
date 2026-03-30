@@ -105,6 +105,23 @@
                 // Hard reload: bypass cache to pick up the new SW-served assets
                 console.log('[App] hard reload...');
                 window.location.reload();
+//                // Unregister all service workers and clear their caches,
+//                // then hard-reload so the browser fetches fresh assets.
+//                console.log('[App] Refresh: unregistering SW and clearing caches…');
+//                Promise.all([
+//                    navigator.serviceWorker.getRegistrations().then(function(regs) {
+//                        return Promise.all(regs.map(function(r) { return r.unregister(); }));
+//                    }),
+//                    caches.keys().then(function(keys) {
+//                        return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+//                    })
+//                ]).then(function() {
+//                    console.log('[App] SW unregistered, caches cleared — reloading');
+//                    window.location.reload();
+//                }).catch(function(e) {
+//                    console.error('[App] cleanup failed, reloading anyway:', e);
+//                    window.location.reload();
+//                });
             });
 
             // Listen for update signal from the Service Worker

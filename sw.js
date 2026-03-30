@@ -4,7 +4,7 @@ var __BASE_PREFIX = '/app/';
 // The build.sh replaces it with a real APP_VERSION string...
 var APP_VERSION = 'version';
 // Cache version — it is only changes, if a need.
-const CACHE_NAME = APP_VERSION+'-SW-v0.11';
+const CACHE_NAME = APP_VERSION+'-SW-v0.12';
 
 function _ts() {
     const d = new Date();
@@ -27,6 +27,56 @@ const ERR = (...args) => {
 LOG('Script evaluated');
 LOG('Base prefix:', __BASE_PREFIX);
 LOG('Cache name:', CACHE_NAME);
+
+// ── SW-side log ring buffer ──────────────────────────────────────────────────
+// Mirrors the client-side buffer in log_bridge.js so that SW lifecycle and
+// fetch events are captured even when no client tab is listening.
+
+const __SW_LOG_MAX = 200;
+const __swLogBuffer = [];
+
+function _swLogPush(text) {
+    __swLogBuffer.push(text);
+    if (__swLogBuffer.length > __SW_LOG_MAX) __swLogBuffer.shift();
+    // Push to all currently open clients
+    self.clients.matchAll({ type: 'window' }).then(function(cls) {
+        cls.forEach(function(c) {
+            c.postMessage({ type: '__ZSOZSO_SW_LOG', text: text });
+        });
+    });
+}
+
+// Patch LOG / ERR to also feed the ring buffer
+const _origLOG = LOG;
+const _origERR = ERR;
+
+const LOG2 = function(...args) {
+    _origLOG(...args);
+    var text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+    _swLogPush(_ts() + ' ' + CACHE_NAME + ' [SW] ' + text);
+};
+
+const ERR2 = function(...args) {
+    _origERR(...args);
+    var text = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+    _swLogPush(_ts() + ' ' + CACHE_NAME + ' [SW ERR] ' + text);
+};
+
+// Re-bind so all subsequent code uses the buffered versions
+// (we can't reassign const LOG/ERR, so we use a message listener instead
+//  and call LOG2/ERR2 from the lifecycle/fetch handlers below)
+
+// Handle messages from clients (GET_LOGS, CLEAR_LOGS)
+self.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'GET_LOGS') {
+        var port = event.ports && event.ports[0];
+        if (port) {
+            port.postMessage({ logs: __swLogBuffer.slice() });
+        }
+    } else if (event.data && event.data.type === 'CLEAR_LOGS') {
+        __swLogBuffer.length = 0;
+    }
+});
 
 // ── Asset loading infrastructure ─────────────────────────────────────────────
 

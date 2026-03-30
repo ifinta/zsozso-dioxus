@@ -33,13 +33,105 @@
     }
 
     /**
-     * SEA.pair(seed) — derive a deterministic key pair from a seed string.
+     * Derive a deterministic P-256 key pair from a seed/passphrase.
+     *
+     * Uses PBKDF2 (100 000 iterations, SHA-256) with two fixed,
+     * application-specific salts to derive independent ECDSA and ECDH
+     * private key scalars.  The scalars are reduced modulo (n-1)+1 so
+     * they are always valid P-256 private keys in [1, n-1].
+     *
+     * Identical seed → identical key pair (deterministic).
+     *
      * @param {string} seed - passphrase / seed to derive the key pair from
      * @returns {Promise<string>} JSON: { pub, priv, epub, epriv }
      */
     async function pairFromSeed(seed) {
-        console.log("[sea_bridge.pairFromSeed] seed length=", seed.length);
-        var p = await _sea().pair(seed);
+        console.log("[sea_bridge.pairFromSeed] Deriving deterministic key pair, seed length=", seed.length);
+
+        var subtle = crypto.subtle;
+        var seedBytes = new TextEncoder().encode(seed);
+
+        // Import the seed as PBKDF2 base key material
+        var baseKey = await subtle.importKey(
+            'raw', seedBytes, { name: 'PBKDF2' }, false, ['deriveBits']
+        );
+
+        // Derive 32 bytes for ECDSA private key
+        var ecdsaBits = new Uint8Array(await subtle.deriveBits({
+            name: 'PBKDF2',
+            salt: new TextEncoder().encode('zsozso-sea-ecdsa'),
+            iterations: 100000,
+            hash: 'SHA-256'
+        }, baseKey, 256));
+
+        // Derive 32 bytes for ECDH private key (independent salt)
+        var ecdhBits = new Uint8Array(await subtle.deriveBits({
+            name: 'PBKDF2',
+            salt: new TextEncoder().encode('zsozso-sea-ecdh'),
+            iterations: 100000,
+            hash: 'SHA-256'
+        }, baseKey, 256));
+
+        // P-256 curve order
+        var curveN = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
+
+        // Convert raw bytes to a valid P-256 private key scalar in [1, n-1]
+        function toValidScalar(bytes) {
+            var hex = '';
+            for (var i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
+            var val = (BigInt('0x' + hex) % (curveN - 1n)) + 1n;
+            var out = val.toString(16).padStart(64, '0');
+            var result = new Uint8Array(32);
+            for (var i = 0; i < 32; i++) result[i] = parseInt(out.substr(i * 2, 2), 16);
+            return result;
+        }
+
+        // Build a minimal PKCS8 DER encoding for a P-256 private key.
+        // This lets WebCrypto compute the public point (x, y) for us.
+        // Structure: SEQUENCE { version=0, AlgId{ecPublicKey, P-256}, OCTET{ECPrivateKey{v=1, d}} }
+        function buildPkcs8(d) {
+            var prefix = new Uint8Array([
+                0x30, 0x41,                                         // SEQUENCE 65 bytes
+                0x02, 0x01, 0x00,                                   // INTEGER 0 (version)
+                0x30, 0x13,                                         // SEQUENCE 19 bytes (AlgorithmIdentifier)
+                0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // OID ecPublicKey
+                0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // OID P-256
+                0x04, 0x27,                                         // OCTET STRING 39 bytes
+                0x30, 0x25,                                         // SEQUENCE 37 bytes (ECPrivateKey)
+                0x02, 0x01, 0x01,                                   // INTEGER 1 (version)
+                0x04, 0x20                                          // OCTET STRING 32 bytes (private key)
+            ]);
+            var buf = new Uint8Array(prefix.length + 32);
+            buf.set(prefix);
+            buf.set(d, prefix.length);
+            return buf;
+        }
+
+        var ecdsaD = toValidScalar(ecdsaBits);
+        var ecdhD  = toValidScalar(ecdhBits);
+
+        // Import ECDSA key via PKCS8, export as JWK to obtain public point
+        var ecdsaKey = await subtle.importKey(
+            'pkcs8', buildPkcs8(ecdsaD),
+            { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']
+        );
+        var ecdsaJwk = await subtle.exportKey('jwk', ecdsaKey);
+
+        // Import ECDH key via PKCS8, export as JWK to obtain public point
+        var ecdhKey = await subtle.importKey(
+            'pkcs8', buildPkcs8(ecdhD),
+            { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
+        );
+        var ecdhJwk = await subtle.exportKey('jwk', ecdhKey);
+
+        // Format in GUN SEA style: pub/epub = "x.y"  priv/epriv = "d"
+        var p = {
+            pub:   ecdsaJwk.x + '.' + ecdsaJwk.y,
+            priv:  ecdsaJwk.d,
+            epub:  ecdhJwk.x  + '.' + ecdhJwk.y,
+            epriv: ecdhJwk.d,
+        };
+
         console.log("[sea_bridge.pairFromSeed] Result:", p ? "got pair, pub=" + p.pub : "null");
         return JSON.stringify(p);
     }

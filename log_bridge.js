@@ -91,20 +91,33 @@
         });
     }
 
-    // Upload logs to the server (POST /app/upload_log)
-    function uploadLogs() {
+    // Save logs to a local file (browser download).
+    // Creates a timestamped .log file and triggers a download dialog.
+    function saveLogs() {
         if (buffer.length === 0) return Promise.resolve('EMPTY');
-        var body = buffer.join('\n');
-        return fetch('/app/upload_log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-            body: body
-        }).then(function(resp) {
-            if (resp.ok) return 'OK';
-            return 'HTTP_' + resp.status;
-        }).catch(function(err) {
-            return 'ERR:' + (err.message || err);
-        });
+        try {
+            var body = buffer.join('\n');
+            var blob = new Blob([body], { type: 'text/plain; charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var d = new Date();
+            var stamp = d.getFullYear()
+                + String(d.getMonth() + 1).padStart(2, '0')
+                + String(d.getDate()).padStart(2, '0')
+                + '-' + String(d.getHours()).padStart(2, '0')
+                + String(d.getMinutes()).padStart(2, '0')
+                + String(d.getSeconds()).padStart(2, '0');
+            var filename = 'zsozso-log-' + stamp + '.log';
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return Promise.resolve('OK');
+        } catch (err) {
+            return Promise.resolve('ERR:' + (err.message || err));
+        }
     }
 
     // Public API for Rust to read
@@ -128,10 +141,10 @@
                 } catch(_) {}
             }
         },
-        // Upload the current log buffer to the server.
+        // Save the current log buffer as a local file download.
         // Returns a Promise that resolves to 'OK', 'EMPTY', or an error string.
-        upload: function() {
-            return uploadLogs();
+        save: function() {
+            return saveLogs();
         },
         // Extract the version (CACHE_NAME) from SW log lines.
         // SW log entries contain the CACHE_NAME string, e.g. "12:34:56.789 zsozso-v2 [SW] ..."

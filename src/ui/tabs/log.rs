@@ -16,13 +16,12 @@ fn clear_log_buffer() {
     let _ = js_sys::eval("window.__zsozso_log && window.__zsozso_log.clear()");
 }
 
-/// Upload the log buffer to the server. Returns a status string.
-async fn upload_log_buffer() -> String {
-    let promise = match js_sys::eval("window.__zsozso_log && window.__zsozso_log.upload()") {
+/// Save the log buffer as a local file download. Returns a status string.
+async fn save_log_buffer() -> String {
+    let promise = match js_sys::eval("window.__zsozso_log && window.__zsozso_log.save()") {
         Ok(v) => v,
         Err(_) => return "ERR:eval".to_string(),
     };
-    // The upload function returns a Promise
     let promise: js_sys::Promise = match promise.dyn_into() {
         Ok(p) => p,
         Err(_) => return "ERR:not_a_promise".to_string(),
@@ -35,7 +34,7 @@ async fn upload_log_buffer() -> String {
 
 pub fn render_log_tab(i18n: &dyn UiI18n) -> Element {
     let mut log_text = use_signal(String::new);
-    let mut upload_status = use_signal(|| String::new());
+    let mut save_status = use_signal(|| String::new());
 
     // Load log immediately when this tab is rendered (on mount)
     use_effect(move || {
@@ -43,9 +42,9 @@ pub fn render_log_tab(i18n: &dyn UiI18n) -> Element {
     });
 
     // Pre-compute i18n strings we need inside async closures
-    let uploading_msg = i18n.log_uploading().to_string();
-    let upload_ok_msg = i18n.log_upload_ok().to_string();
-    let upload_empty_msg = i18n.log_upload_empty().to_string();
+    let saving_msg = i18n.log_saving().to_string();
+    let save_ok_msg = i18n.log_save_ok().to_string();
+    let save_empty_msg = i18n.log_save_empty().to_string();
 
     rsx! {
         div { style: "display: flex; flex-direction: column; height: 100%;",
@@ -62,29 +61,29 @@ pub fn render_log_tab(i18n: &dyn UiI18n) -> Element {
                     },
                     "{i18n.log_refresh()}"
                 }
-                // Upload button
+                // Save button
                 button {
                     style: "width: 100%; padding: 10px 14px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; font-weight: bold;",
                     onclick: {
-                        let uploading_msg = uploading_msg.clone();
-                        let upload_ok_msg = upload_ok_msg.clone();
-                        let upload_empty_msg = upload_empty_msg.clone();
+                        let saving_msg = saving_msg.clone();
+                        let save_ok_msg = save_ok_msg.clone();
+                        let save_empty_msg = save_empty_msg.clone();
                         move |_| {
-                            let uploading_msg = uploading_msg.clone();
-                            let upload_ok_msg = upload_ok_msg.clone();
-                            let upload_empty_msg = upload_empty_msg.clone();
+                            let saving_msg = saving_msg.clone();
+                            let save_ok_msg = save_ok_msg.clone();
+                            let save_empty_msg = save_empty_msg.clone();
                             spawn(async move {
-                                upload_status.set(uploading_msg);
-                                let result = upload_log_buffer().await;
+                                save_status.set(saving_msg);
+                                let result = save_log_buffer().await;
                                 match result.as_str() {
-                                    "OK" => upload_status.set(upload_ok_msg),
-                                    "EMPTY" => upload_status.set(upload_empty_msg),
-                                    other => upload_status.set(format!("\u{274C} {}", other)),
+                                    "OK" => save_status.set(save_ok_msg),
+                                    "EMPTY" => save_status.set(save_empty_msg),
+                                    other => save_status.set(format!("\u{274C} {}", other)),
                                 }
                             });
                         }
                     },
-                    "{i18n.log_upload()}"
+                    "{i18n.log_save()}"
                 }
                 // Clear button
                 button {
@@ -92,17 +91,17 @@ pub fn render_log_tab(i18n: &dyn UiI18n) -> Element {
                     onclick: move |_| {
                         clear_log_buffer();
                         log_text.set(String::new());
-                        upload_status.set(String::new());
+                        save_status.set(String::new());
                     },
                     "{i18n.log_clear()}"
                 }
             }
 
-            // Upload status line (only shown when non-empty)
-            if !upload_status.read().is_empty() {
+            // Save status line (only shown when non-empty)
+            if !save_status.read().is_empty() {
                 p {
                     style: "margin: 0 0 8px 0; font-size: 0.85em; color: #6c757d;",
-                    "{upload_status.read()}"
+                    "{save_status.read()}"
                 }
             }
 

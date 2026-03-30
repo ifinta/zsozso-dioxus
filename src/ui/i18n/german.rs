@@ -91,11 +91,11 @@ impl UiI18n for GermanUi {
     fn tab_log(&self) -> &'static str { "Protokoll" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Aktualisieren" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Löschen" }
-    fn log_upload(&self) -> &'static str { "\u{2B06}\u{FE0F} Hochladen" }
-    fn log_uploading(&self) -> &'static str { "Wird hochgeladen..." }
-    fn log_upload_ok(&self) -> &'static str { "\u{2705} Protokoll hochgeladen" }
-    fn log_upload_fail(&self, e: &str) -> String { format!("\u{274C} Hochladen fehlgeschlagen: {}", e) }
-    fn log_upload_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} Protokoll ist leer" }
+    fn log_save(&self) -> &'static str { "\u{1F4BE} Speichern" }
+    fn log_saving(&self) -> &'static str { "Wird gespeichert..." }
+    fn log_save_ok(&self) -> &'static str { "\u{2705} Protokoll gespeichert" }
+    fn log_save_fail(&self, e: &str) -> String { format!("\u{274C} Speichern fehlgeschlagen: {}", e) }
+    fn log_save_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} Protokoll ist leer" }
 
     // Update toast
     fn toast_update_available(&self) -> &'static str { "\u{1F680} Eine neue Version von Zsozso ist verfügbar!" }

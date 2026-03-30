@@ -93,6 +93,4 @@ echo ""
 echo "✓ Build complete — APP_VERSION: ${APP_VERSION}"
 echo "  Deploy from: deploy/${PREFIX}/"
 echo "  Test:        npx serve deploy/ -l 8080  →  http://localhost:8080/${PREFIX}/"
-echo ""
-echo "  WARNING: The sw.js must be extended with LOG support!"
-echo "           (?) GitHub Pages not supports the actual implementation..."
+

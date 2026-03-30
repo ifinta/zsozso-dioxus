@@ -91,11 +91,11 @@ impl UiI18n for SpanishUi {
     fn tab_log(&self) -> &'static str { "Registro" }
     fn log_refresh(&self) -> &'static str { "\u{1F504} Actualizar" }
     fn log_clear(&self) -> &'static str { "\u{1F5D1} Limpiar" }
-    fn log_upload(&self) -> &'static str { "\u{2B06}\u{FE0F} Subir" }
-    fn log_uploading(&self) -> &'static str { "Subiendo..." }
-    fn log_upload_ok(&self) -> &'static str { "\u{2705} Registro subido" }
-    fn log_upload_fail(&self, e: &str) -> String { format!("\u{274C} Error al subir: {}", e) }
-    fn log_upload_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} El registro está vacío" }
+    fn log_save(&self) -> &'static str { "\u{1F4BE} Guardar" }
+    fn log_saving(&self) -> &'static str { "Guardando..." }
+    fn log_save_ok(&self) -> &'static str { "\u{2705} Registro guardado" }
+    fn log_save_fail(&self, e: &str) -> String { format!("\u{274C} Error al guardar: {}", e) }
+    fn log_save_empty(&self) -> &'static str { "\u{26A0}\u{FE0F} El registro está vacío" }
 
     // Update toast
     fn toast_update_available(&self) -> &'static str { "\u{1F680} ¡Una nueva versión de Zsozso está disponible!" }
