@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use dioxus::prelude::*;
 use zeroize::Zeroizing;
-use crate::ledger::NetworkEnvironment;
-use crate::i18n::Language;
-use crate::db::gundb::SeaKeyPair;
+use zsozso_ledger::NetworkEnvironment;
+use zsozso_common::Language;
+use zsozso_db::gundb::SeaKeyPair;
 use super::status::TxStatus;
 use super::tabs::Tab;
 

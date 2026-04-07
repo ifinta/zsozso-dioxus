@@ -5,14 +5,14 @@ use super::actions::*;
 use super::actions::new_store_for_network;
 use super::status::TxStatus;
 use super::i18n::ui_i18n;
-use crate::ledger::{Ledger, NetworkEnvironment, StellarLedger};
-use crate::store::Store;
-use crate::store::passkey;
-use crate::db::gundb::{GunSea, Sea};
-use crate::db::network::{NetworkGraph, GunNetworkGraph};
+use zsozso_ledger::{Ledger, NetworkEnvironment, StellarLedger};
+use zsozso_store::Store;
+use zsozso_store::passkey;
+use zsozso_db::gundb::{GunSea, Sea};
+use zsozso_db::network::{NetworkGraph, GunNetworkGraph};
 use super::clipboard::{copy_to_clipboard, clear_clipboard};
 use super::log;
-use crate::ledger::sc::SmartContract;
+use zsozso_ledger::sc::SmartContract;
 
 #[derive(Clone, Copy)]
 pub struct AppController {
@@ -392,7 +392,7 @@ impl AppController {
     }
 
     pub fn set_language(&self, code: &str) {
-        use crate::i18n::Language;
+        use zsozso_common::Language;
         let lang = match code {
             "hu" => Language::Hungarian,
             "fr" => Language::French,
@@ -694,7 +694,7 @@ impl AppController {
         ping_status.set(Some(i18n.ping_calling().to_string()));
 
         spawn(async move {
-            let sc = crate::ledger::sc::zsozso_sc::ZsozsoSc::new(net_env, lang);
+            let sc = zsozso_ledger::sc::zsozso_sc::ZsozsoSc::new(net_env, lang);
             match sc.ping(&secret).await {
                 Ok(msg) => {
                     let i18n = ui_i18n(lang);
@@ -866,7 +866,7 @@ impl AppController {
         zs_status.set(Some(i18n.zs_locking().to_string()));
 
         spawn(async move {
-            let sc = crate::ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
+            let sc = zsozso_ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
             let i18n = ui_i18n(lang);
             match sc.lock(&secret, amount).await {
                 Ok(_) => {
@@ -908,7 +908,7 @@ impl AppController {
         zs_status.set(Some(i18n.zs_unlocking().to_string()));
 
         spawn(async move {
-            let sc = crate::ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
+            let sc = zsozso_ledger::sc::proof_of_zsozso_sc::ProofOfZsozsoSc::new(net_env, lang);
             let i18n = ui_i18n(lang);
             match sc.unlock(&secret, amount).await {
                 Ok(_) => {

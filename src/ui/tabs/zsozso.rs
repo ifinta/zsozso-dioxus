@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::ui::state::WalletState;
 use crate::ui::controller::AppController;
 use crate::ui::i18n::UiI18n;
-use crate::ledger::NetworkEnvironment;
+use zsozso_ledger::NetworkEnvironment;
 
 pub fn render_zsozso_tab(s: WalletState, ctrl: AppController, i18n: &dyn UiI18n) -> Element {
     let net_env = *s.current_network.read();
