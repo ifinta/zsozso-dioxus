@@ -1,8 +1,7 @@
 # todo:
 
 ## simple steps:
-- setup a gun server
-- debug gundb and aes implementation (key from stellar secret)
+- debug gundb and aes implementation
 
 ## known issues:
 #### (not yet solved, but it isn't mandant to correct it):
@@ -15,7 +14,7 @@
 # for dev's:
 #### (rarely updated - we are at the beginning):
 
-## Architecture
+## Architecture (it needs to be updated)
 
 The application targets **PWA (Progressive Web App) only** — all code compiles to WebAssembly and runs in the browser. There are no desktop or native feature flags; the single `web` feature is the default. Platform differences (clipboard, storage, timers) use browser APIs directly.
 
@@ -97,7 +96,7 @@ server/
 └── log_upload_server.py     # Lightweight log upload HTTP helper (port 9977, 50 MB quota)
 ```
 
-### Core Traits
+### Core Traits (it needs to be updated)
 
 | Trait | Purpose | Implementation |
 |-------|---------|----------------|
@@ -145,13 +144,14 @@ The SW (`sw.js`) handles offline caching and version management:
 - A toast (in `index.html`) polls `window.__ZSOZSO_UPDATE_READY` and shows a manual "Refresh" button when an update is detected
 - The SW also forwards its own log entries to the main page via `postMessage`, visible in the Log tab
 
-### Bundled Offline Deployment (bundle_sw.js)
+### Bundled Offline Deployment (bundle.js)
 
-For GitHub Pages and similar static hosting, `bundle_sw.js` creates a fully
+For static hosting, `bundle.js` creates a fully
 self-contained deployment from the `dist/` build output. The result is just
 two physical files: `index.html` and `sw.js`.
+I will be served some icons, manifest file with it.
 
-**How it works (JSON-in-HTML mode, `-j` flag):**
+**How it works (JSON-in-HTML):**
 
 1. All files in `dist/` are gzip-compressed and base64-encoded
 2. A bootloader `index.html` is generated that registers the SW and shows a
@@ -164,15 +164,6 @@ two physical files: `index.html` and `sw.js`.
 6. PWA metadata (manifest, icons) is embedded as data URIs in the bootloader
    so PWA install works even before the SW activates
 
-**Modifier flags:**
-
-| Flag | Purpose |
-|------|---------|
-| `-j` | JSON-in-HTML bundling (assets embedded in SW) |
-| `-dioxus` | SPA routing — all navigation → `index.html` (no multi-page resolution) |
-| `-logging` | Injects log ring buffer + forwarding into SW |
-| `-raw` | Copy manifest/icons as physical files instead of embedding as data URIs |
-
 **Build pipeline (`build.sh`):**
 
 ```bash
@@ -184,16 +175,7 @@ two physical files: `index.html` and `sw.js`.
 # 6. Output: deploy/zsozso-dioxus/{index.html, sw.js}
 ```
 
-**GitHub Pages deployment:**
-
-The `.github/workflows/deploy.yml` workflow runs `build.sh` on push to `main`
-and deploys `deploy/zsozso-dioxus/` as a GitHub Pages artifact.
-
-To enable: repo Settings → Pages → Source → GitHub Actions.
-
-Live: https://ifinta.github.io/zsozso-dioxus/
-
-### Internationalization (i18n) Traits
+### Internationalization (i18n) Traits (it needs to be updated)
 
 Every user-facing string in the application is abstracted behind i18n traits, with factory functions selecting the correct implementation based on the active `Language`. Each module owns its own i18n layer:
 
@@ -261,23 +243,11 @@ npx serve dist/ -l 8080
 ```
 ## Deployment
 
-See the "Bundled Offline Deployment" section above for details on `bundle_sw.js`.
+See the "Bundled Offline Deployment" section above for details on `bundle.js`.
 
 ### Traditional (nginx / static server)
 
-Copy the contents of `dist/zsozso-dioxus/` to your web server root.
-
-### GitHub Pages (bundled offline)
-
-Automatic via `.github/workflows/deploy.yml` — pushes to `main` build and
-deploy `deploy/zsozso-dioxus/` as a GitHub Pages artifact.
-
-Live: https://ifinta.github.io/zsozso-dioxus/
-
-```bash
-# Dry run — print what CACHE_NAME would be used, without building:
-./build.sh --dry
-```
+Copy the contents of `dist/app/` to your web server root.
 
 ### Feature Flag
 
@@ -306,12 +276,6 @@ The project includes PWA support out of the box via the following files:
 - **Desktop Chrome/Edge** — Address bar install icon or Menu → "Install Zsozso Wallet"
 
 ### Offline Support
-
-In **bundled mode** (GitHub Pages deployment), the entire app is embedded inside
-the service worker. All assets are available offline from the very first visit —
-no network requests are needed after the initial page load. The bootloader HTML
-registers the SW, which unpacks all assets into CacheStorage and serves them on
-subsequent requests.
 
 In **traditional mode** (nginx deployment), the SW caches assets on first visit
 and serves from cache on subsequent requests, with network fallback for updates.

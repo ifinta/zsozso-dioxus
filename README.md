@@ -1,6 +1,6 @@
 # Zsozso
 
-The main application for the [Iceberg Protocol](https://ifinta.github.io/zsozso-webpage/) ecosystem, built with Rust and [Dioxus](https://dioxuslabs.com/). Runs as a PWA (Progressive Web Application) app in the browser via WebAssembly.
+The main application for the [Iceberg Protocol](https://zsozso.info/app) ecosystem, built with Rust and [Dioxus](https://dioxuslabs.com/). Runs as a PWA (Progressive Web Application) app in the browser via WebAssembly.
 
 ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hierarchical MLM infrastructure and message-bus architecture on the [Stellar](https://stellar.org/) blockchain. This app provides a UI for key management, transaction signing, network interaction, ...
 
@@ -24,7 +24,6 @@ ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hie
 
 - [zsozso.info](https://zsozso.info) — Project website & whitepaper
 - [the PWA App](https://zsozso.info/app) — A running version of this App
-- [the PWA App on GitHub Pages](https://ifinta.github.io/zsozso-dioxus/) — A GitHub Pages deployment
 - [github](https://github.com/ifinta/zsozso-webpage) — Project website & whitepaper on the github
 - [ZSOZSO on Stellar Expert](https://stellar.expert/explorer/public/asset/ZSOZSO-GDZKLEYJ54QUIEYE4DUUOCIJDUS7R5MDW5MCAB3XTUGPJ3C7SSZJRQUC) — ZSOZSO asset on mainnet
 
@@ -34,7 +33,7 @@ See repository for license details.
 
 # Magyarul mindez:
 
-Az [Iceberg Protocol](https://ifinta.github.io/zsozso-webpage/) ökoszisztéma fő alkalmazása, Rust és [Dioxus](https://dioxuslabs.com/) segítségével fejlesztve. PWA (Progressive Web Application) alkalmazásként fut a böngészőben WebAssembly-n keresztül.
+Az [Iceberg Protocol](https://zsozso.info/app) ökoszisztéma fő alkalmazása, Rust és [Dioxus](https://dioxuslabs.com/) segítségével fejlesztve. PWA (Progressive Web Application) alkalmazásként fut a böngészőben WebAssembly-n keresztül.
 
 A ZSOZSO az Iceberg Protocol működtető tokenje — egy decentralizált, hierarchikus MLM-infrastruktúra és üzenetbusz-architektúra a [Stellar](https://stellar.org/) blokkláncon. Ez az alkalmazás felületet biztosít kulcskezeléshez, tranzakció-aláíráshoz, hálózati interakcióhoz, ...
 
