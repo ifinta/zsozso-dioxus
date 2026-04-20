@@ -4,6 +4,8 @@ The main application for the [Iceberg Protocol](https://zsozso.info/app) ecosyst
 
 ZSOZSO is the utility token fueling the Iceberg Protocol — a decentralized hierarchical MLM infrastructure and message-bus architecture on the [Stellar](https://stellar.org/) blockchain. This app provides a UI for key management, transaction signing, network interaction, ...
 
+The architecture and critical logic of this project are the results of human-led AI-assisted engineering. This unique workflow ensures industrial-grade reliability and accelerated deployment.
+
 ## Installation
 
 ### iOS

@@ -14,6 +14,8 @@
 # for dev's:
 #### (rarely updated - we are at the beginning):
 
+The architecture and critical logic of this project are the results of human-led AI-assisted engineering. This unique workflow ensures industrial-grade reliability and accelerated deployment.
+
 ## Architecture (it needs to be updated)
 
 The application targets **PWA (Progressive Web App) only** — all code compiles to WebAssembly and runs in the browser. There are no desktop or native feature flags; the single `web` feature is the default. Platform differences (clipboard, storage, timers) use browser APIs directly.
